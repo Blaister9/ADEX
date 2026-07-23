@@ -19,12 +19,15 @@ internal static class InfrastructureAvailability
     public static bool Enabled =>
         Environment.GetEnvironmentVariable(EnableVariable) == "1";
 
+    // 127.0.0.1 rather than localhost: compose publishes these ports on the IPv4
+    // loopback only, and on many machines `localhost` resolves to ::1 first —
+    // which reports a healthy Redis as unreachable.
     public static string PostgresConnectionString =>
         Environment.GetEnvironmentVariable("ConnectionStrings__Postgres")
-        ?? "Host=localhost;Port=55432;Database=adex;Username=adex;Password=local-dev-only-change-me";
+        ?? "Host=127.0.0.1;Port=55432;Database=adex;Username=adex;Password=local-dev-only-change-me";
 
     public static string RedisConnectionString =>
-        Environment.GetEnvironmentVariable("ConnectionStrings__Redis") ?? "localhost:56379";
+        Environment.GetEnvironmentVariable("ConnectionStrings__Redis") ?? "127.0.0.1:56379";
 
     /// <summary>Skips the calling test unless the local infrastructure was explicitly enabled.</summary>
     public static void RequireInfrastructure()

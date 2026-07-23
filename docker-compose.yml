@@ -1,0 +1,73 @@
+# Local development infrastructure for ADEX.
+#
+# Development only. This file is not a deployment artefact: it binds to
+# 127.0.0.1, uses obviously local credentials supplied through .env, and has no
+# TLS, backups, resource limits or replication.
+#
+#   cp .env.example .env
+#   docker compose up -d
+#   docker compose ps
+#   docker compose logs -f postgres
+#   docker compose down            # stop, keep data
+#   docker compose down -v         # stop and reset the database
+#
+# Version pinning rationale: docs/adr/0002-toolchain-and-runtime-baseline.md
+
+name: adex
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: adex-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-adex}
+      POSTGRES_USER: ${POSTGRES_USER:-adex}
+      # No default is provided on purpose: a compose file that ships a working
+      # password teaches everyone the password.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # ADEX stores no local times. A database defaulting to a local zone would
+      # corrupt every attribution window.
+      PGTZ: UTC
+      TZ: UTC
+    command:
+      - postgres
+      - -c
+      - timezone=UTC
+      - -c
+      - log_timezone=UTC
+    ports:
+      # Bound to the loopback interface and a non-default port, so a locally
+      # installed PostgreSQL does not clash and nothing is reachable from the
+      # network.
+      - "127.0.0.1:${POSTGRES_PORT:-55432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Applied once, on an empty data directory, in lexical order.
+      - ./infra/local/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-adex} -d ${POSTGRES_DB:-adex}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: adex-redis
+    restart: unless-stopped
+    # Redis is optional acceleration and must be safe to lose (ADR-0004):
+    # persistence is off, so nothing here can quietly become a system of record.
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-56379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+volumes:
+  postgres-data:
+    name: adex-postgres-data

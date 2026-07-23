@@ -17,7 +17,13 @@ builder.Services.ConfigureHttpJsonOptions(options =>
         System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
 });
 
-builder.Services.AddProblemDetails();
+builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = context =>
+{
+    // ASP.NET adds a camelCase `traceId`. ADEX already returns `correlation_id`,
+    // which is the identifier a tenant quotes in a support request; two
+    // identifiers under two naming conventions is worse than one.
+    context.ProblemDetails.Extensions.Remove("traceId");
+});
 builder.Services.AddExceptionHandler<AdexExceptionHandler>();
 builder.Services.AddAdexTelemetry(builder.Configuration);
 builder.Services.AddAdexInfrastructure(builder.Configuration, isDevelopment);
