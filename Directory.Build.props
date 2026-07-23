@@ -25,6 +25,13 @@
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <!--
+      xUnit1051 asks every awaited call to thread TestContext.Current.CancellationToken.
+      These suites are in-process and finish in milliseconds, so the cancellation
+      responsiveness it buys is nil while the noise it adds is constant. Revisit if a
+      long-running or infrastructure-bound suite is added that can actually hang.
+    -->
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
   </PropertyGroup>
 
 </Project>

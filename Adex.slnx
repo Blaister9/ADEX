@@ -1,0 +1,18 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Adex.Api/Adex.Api.csproj" />
+    <Project Path="src/Adex.Application/Adex.Application.csproj" />
+    <Project Path="src/Adex.Domain/Adex.Domain.csproj" />
+    <Project Path="src/Adex.Infrastructure/Adex.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+  <Folder Name="/tests/contract/">
+    <Project Path="tests/contract/Adex.ContractTests/Adex.ContractTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/integration/">
+    <Project Path="tests/integration/Adex.IntegrationTests/Adex.IntegrationTests.csproj" />
+  </Folder>
+  <Folder Name="/tests/unit/">
+    <Project Path="tests/unit/Adex.UnitTests/Adex.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The domain has no NuGet dependency, deliberately and checkably (see
+    docs/architecture/container-view.md). If a pull request adds one, the
+    reviewer asks why.
+  -->
+  <PropertyGroup>
+    <RootNamespace>Adex.Domain</RootNamespace>
+    <AssemblyName>Adex.Domain</AssemblyName>
+  </PropertyGroup>
+
+</Project>
