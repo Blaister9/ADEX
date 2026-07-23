@@ -1,3 +1,4 @@
+using System.Buffers.Binary;
 using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
@@ -45,6 +46,9 @@ public static class DecisionSeed
         Span<byte> hash = stackalloc byte[HMACSHA256.HashSizeInBytes];
         HMACSHA256.HashData(salt, Encoding.UTF8.GetBytes(material), hash);
 
-        return BitConverter.ToUInt32(hash[..4]);
+        // Little-endian explicitly, not BitConverter's architecture-dependent
+        // order: the Python simulator has to derive the identical seed for the
+        // cross-language equivalence fixtures to mean anything (ADR-0003).
+        return BinaryPrimitives.ReadUInt32LittleEndian(hash);
     }
 }

@@ -1,0 +1,66 @@
+{
+  "description": "Shared decision-seed vectors. Adex.Domain.Policies.DecisionSeed (C#) and adex_simulator.seeds.derive_seed (Python) must both reproduce every expected_seed exactly. The fixtures, not the prose, are the contract between the two implementations (ADR-0003).",
+  "algorithm": "HMAC-SHA256(salt, tenant_id \u001f placement \u001f policy_key \u001f policy_version \u001f subject_or_decision_id), then the first four bytes read as a little-endian unsigned 32-bit integer.",
+  "vectors": [
+    {
+      "name": "baseline",
+      "salt": "adex-cross-language-fixture-salt",
+      "tenant_id": "ten_01JQZ6A1B2C3D4E5F6G7H8J9K0",
+      "placement": "homepage.primary-cta",
+      "policy_key": "uniform-random",
+      "policy_version": 1,
+      "subject_or_decision_id": "anon_01JQZ7H9K2M3N4P5Q6R7S8T9V0",
+      "expected_seed": 1813519567
+    },
+    {
+      "name": "other-tenant",
+      "salt": "adex-cross-language-fixture-salt",
+      "tenant_id": "ten_01JQZ6B2C3D4E5F6G7H8J9K0M1",
+      "placement": "homepage.primary-cta",
+      "policy_key": "uniform-random",
+      "policy_version": 1,
+      "subject_or_decision_id": "anon_01JQZ7H9K2M3N4P5Q6R7S8T9V0",
+      "expected_seed": 784163291
+    },
+    {
+      "name": "other-placement",
+      "salt": "adex-cross-language-fixture-salt",
+      "tenant_id": "ten_01JQZ6A1B2C3D4E5F6G7H8J9K0",
+      "placement": "catalog.recommendation-slot",
+      "policy_key": "uniform-random",
+      "policy_version": 1,
+      "subject_or_decision_id": "anon_01JQZ7H9K2M3N4P5Q6R7S8T9V0",
+      "expected_seed": 2234918723
+    },
+    {
+      "name": "policy-version-2",
+      "salt": "adex-cross-language-fixture-salt",
+      "tenant_id": "ten_01JQZ6A1B2C3D4E5F6G7H8J9K0",
+      "placement": "homepage.primary-cta",
+      "policy_key": "uniform-random",
+      "policy_version": 2,
+      "subject_or_decision_id": "anon_01JQZ7H9K2M3N4P5Q6R7S8T9V0",
+      "expected_seed": 2795863895
+    },
+    {
+      "name": "no-subject-uses-decision-id",
+      "salt": "adex-cross-language-fixture-salt",
+      "tenant_id": "ten_01JQZ6A1B2C3D4E5F6G7H8J9K0",
+      "placement": "homepage.primary-cta",
+      "policy_key": "uniform-random",
+      "policy_version": 1,
+      "subject_or_decision_id": "dec_01JQZ8K3N4P5R6S7T8V9W0X1Y2",
+      "expected_seed": 103910953
+    },
+    {
+      "name": "rotated-salt",
+      "salt": "adex-rotated-fixture-salt",
+      "tenant_id": "ten_01JQZ6A1B2C3D4E5F6G7H8J9K0",
+      "placement": "homepage.primary-cta",
+      "policy_key": "uniform-random",
+      "policy_version": 1,
+      "subject_or_decision_id": "anon_01JQZ7H9K2M3N4P5Q6R7S8T9V0",
+      "expected_seed": 3570446834
+    }
+  ]
+}
