@@ -4,6 +4,14 @@ A decision is the product's central artefact. This document defines exactly what
 happens between a client asking and ADEX answering, and what must be true
 afterwards.
 
+This is the production-capable target lifecycle. In the task-003 executable
+foundation, API-key tenant resolution, strict validation, tenant-specific
+context allow-lists, decision idempotency, pure selection and the in-memory
+development audit store are implemented. Origin enforcement, placement
+configuration/not-found semantics, rate limiting, Redis read-through and
+PostgreSQL persistence remain roadmap work and are therefore not advertised as
+current responses in the v1 OpenAPI contract.
+
 ## Sequence
 
 ```mermaid

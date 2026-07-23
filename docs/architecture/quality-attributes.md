@@ -76,7 +76,8 @@ cross-language fixture equivalence before any policy is promoted (ADR-0003).
 pinned toolchains (ADR-0002).
 
 *Status.* Implemented for `uniform-random` and for the simulator's environment
-generator.
+generator. C# and Python consume the same seed vectors and the same policy
+selection/propensity vectors.
 
 ## 6. Simple integration and removal
 
@@ -131,8 +132,10 @@ required attributes; an operator runbook exists per known failure mode.
 
 *Mechanism.* ADR-0011, plus the failure table in `decision-lifecycle.md`.
 
-*Status.* Health endpoints and OpenTelemetry wiring implemented; dashboards,
-alerts and runbooks are roadmap items.
+*Status.* Health endpoints and OpenTelemetry traces, metrics and structured
+request logs are implemented. In-memory signal tests verify the required
+request fields and the optional-cache degraded counter without forbidden
+high-cardinality tags. Dashboards, alerts and runbooks are roadmap items.
 
 ## 10. Domain neutrality
 

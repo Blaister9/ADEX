@@ -1,6 +1,6 @@
 # ADR-0011 — Observability baseline
 
-- Status: Accepted
+- Status: Superseded by ADR-0014
 - Date: 2026-07-22
 - Deciders: Foundation architect agent (task 001)
 

@@ -1,6 +1,6 @@
 # ADR-0002 — Toolchain and runtime baseline
 
-- Status: Accepted
+- Status: Superseded by ADR-0013
 - Date: 2026-07-22
 - Deciders: Foundation architect agent (task 001)
 

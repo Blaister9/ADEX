@@ -18,8 +18,8 @@ Zero runtime dependencies; only the test and lint tooling needs installing.
 
 ```bash
 python -m venv .venv
-.venv/Scripts/python -m pip install -e ".[dev]"   # Windows
-# .venv/bin/python -m pip install -e ".[dev]"     # macOS / Linux
+.venv/Scripts/python -m pip install -r requirements-dev.lock   # Windows
+# .venv/bin/python -m pip install -r requirements-dev.lock     # macOS / Linux
 ```
 
 ## Commands

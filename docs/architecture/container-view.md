@@ -9,7 +9,7 @@
 | Dashboard | TypeScript + Vite + React | `apps/dashboard` | Static assets; talks only to the public API |
 | PostgreSQL | 17 | `docker-compose.yml`, `infra/` | Managed service in real environments |
 | Redis | 7.4 | `docker-compose.yml`, `infra/` | Optional; service degrades without it |
-| Simulator | Python 3.12 | `simulation/adex-simulator` | Developer/CI tool, never deployed to serve traffic |
+| Simulator | Python 3.13.14 | `simulation/adex-simulator` | Developer/CI tool, never deployed to serve traffic |
 
 ```mermaid
 graph TB

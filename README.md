@@ -31,13 +31,13 @@ drawing any conclusion from a green build.
 
 | Tool | Version | Pinned in |
 | --- | --- | --- |
-| .NET SDK | 10.0.301 (LTS) | `global.json` |
-| Node.js | 22.x LTS | `.nvmrc`, `package.json#engines` |
-| pnpm | 11.x | `package.json#packageManager` |
-| Python | 3.12 | `simulation/adex-simulator/pyproject.toml` |
+| .NET SDK | 10.0.302 (LTS) | `global.json` |
+| Node.js | 22.22.3 Maintenance LTS | `.nvmrc`, `package.json#engines` |
+| pnpm | 11.6.0 | `package.json#packageManager` |
+| Python | 3.13.14 | `.python-version`, `simulation/adex-simulator/pyproject.toml` |
 | Docker + Compose | any current version | — |
 
-Rationale for every version: [ADR-0002](docs/adr/0002-toolchain-and-runtime-baseline.md).
+Rationale for every version: [ADR-0013](docs/adr/0013-reproducible-toolchain-and-dependency-upgrades.md).
 You only need the toolchain for the surface you are working on; each section
 below stands alone.
 
@@ -121,8 +121,8 @@ pnpm --filter @adex/dashboard dev      # http://localhost:5173
 ```bash
 cd simulation/adex-simulator
 python -m venv .venv
-.venv/Scripts/python -m pip install -e ".[dev]"    # Windows
-# .venv/bin/python -m pip install -e ".[dev]"      # macOS / Linux
+.venv/Scripts/python -m pip install -r requirements-dev.lock    # Windows
+# .venv/bin/python -m pip install -r requirements-dev.lock      # macOS / Linux
 
 python -m ruff check .
 python -m ruff format --check .
@@ -154,6 +154,8 @@ Real, and covered by tests that were executed:
 - the decision path in process: validation, tenant scoping, uniform-random
   selection, a full immutable audit record, and a replay check proving a stored
   decision reproduces the alternative that was served;
+- tenant-scoped 24-hour decision retry idempotency and tenant-specific context
+  allow-lists in the development adapters;
 - idempotent event ingestion, where a replay returns `202 duplicate` and changes
   no state, and an event citing another tenant's decision is refused;
 - the public contract, validated from both sides — schemas and examples in CI,
@@ -170,8 +172,9 @@ Not real yet, and named for what it is in the code rather than dressed up:
   with a pointer to the roadmap instead of silently degrading to a cache.
 - **placement configuration.** Every placement resolves to `uniform-random` v1
   because there is no configuration store.
-- **tenancy.** API keys come from configuration: no hashing, no origin
-  allow-list, no rotation, no rate limiting.
+- **tenancy.** API keys and additional context allow-lists come from
+  development configuration: no hashing, no origin allow-list, no rotation, no
+  rate limiting.
 - **the dashboard.** A shell that probes API health and lists what does not exist.
 - **policies beyond uniform random.** Deliberate: a bandit converging on a bug
   looks exactly like a bandit working ([ADR-0009](docs/adr/0009-initial-policy-sequence.md)).
