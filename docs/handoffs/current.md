@@ -2,107 +2,107 @@
 
 ## Task
 
-Task 003 — remediate every finding in
-`docs/reviews/001-foundation-review.md` on the existing
-`feature/001-foundation` branch.
+Task 003 — remediate all FND-001 through FND-011 findings from
+`docs/reviews/001-foundation-review.md` on the existing foundation branch.
 
 ## Branch and commit
 
 - Branch: `feature/001-foundation`
-- Reviewed baseline: `deaf78a1227b4b0df96c7ed04adb6d636176cb02`
+- Review baseline: `deaf78a1227b4b0df96c7ed04adb6d636176cb02`
 - Remediation commits:
-  - `da9e99e` — executable API contract, idempotency, allow-lists, size limits,
-    observability and contract tests
-  - `fd7dc89` — exact toolchains, shared policy vectors and ADR updates
+  - `da9e99e` — executable contract, idempotency, allow-lists, limits and
+    observability
+  - `fd7dc89` — exact toolchains, shared policy vectors and ADRs
+  - `31f2ed2` — initial remediation evidence and handoff
+  - `23b40b9` — mature optional DOM peer and reproducible pnpm lock
   - documentation closeout — the commit containing this handoff
 - Remote: `origin/feature/001-foundation`
 
 ## Objective completed
 
-FND-001 through FND-010 are implemented and locally verified. FND-011 requires
-the final GitHub Actions run to be green; its run URL is added after the final
-push. Detailed per-finding evidence is durable in
-`docs/reviews/001-foundation-remediation.md`.
-
-The executable foundation now enforces closed request shapes, tenant-specific
-context allow-lists, 24-hour tenant-scoped decision retry idempotency, and the
-4-KiB UTF-8 event-properties limit. Runtime request examples and response
-schemas are exercised by the hosted API. C# and Python share policy behavior
-vectors. All three OpenTelemetry signals have executable tests. Toolchains and
-Python dependencies are exactly reproducible.
+All eleven findings are `RESOLVED`: 1 BLOCKER, 2 HIGH, 6 MEDIUM, 1 LOW and
+1 NOTE. Detailed causes, tests and closure evidence are in
+`docs/reviews/001-foundation-remediation.md`. No finding is pending, deferred,
+accepted as risk or externally blocked.
 
 ## Files changed
 
-- API/application/infrastructure: strict request validation, idempotency port
-  and development store, context policy, structured request logging, Redis
-  degradation metric and neutral readiness detail.
-- Contract/tests: executable status set, runtime invalid examples, JSON Schema
-  response evaluation, idempotency/isolation/concurrency/size/OTel tests.
-- Simulation/tooling: shared policy fixture, Python consumer, exact toolchain
-  pins, Python lock and CI install/audit changes.
-- Documentation: ADR-0013, ADR-0014, lifecycle/quality/readmes, remediation
-  report and this handoff.
+- API/application/infrastructure: strict request validation, tenant-scoped
+  idempotency and context policy, truthful Redis readiness and OpenTelemetry
+  signals.
+- Contracts/tests: executable OpenAPI statuses, hosted invalid examples,
+  runtime JSON Schema validation and isolation/concurrency/boundary tests.
+- Tooling/simulation: exact runtimes and Python lock, shared policy vectors,
+  mature optional Vitest peer and CI audit alignment.
+- Documentation: ADR-0013, ADR-0014, architecture/readmes, remediation report
+  and this handoff.
 
-Use `git show --stat` on the remediation commits for the authoritative file
-list.
+Use `git show --stat da9e99e fd7dc89 23b40b9` for the authoritative product and
+tooling file list.
 
 ## Architecture decisions
 
-- ADR-0013 supersedes ADR-0002: exact .NET/Node/pnpm/Python pins, locked Python
-  dependencies and a controlled security upgrade process.
-- ADR-0014 supersedes ADR-0011: OpenTelemetry structured request logs are real;
-  foundation `adex.cache.degraded` measures optional Redis degradation without
-  falsely claiming a PostgreSQL fallback.
-- OpenAPI describes the executable foundation. Deferred origin, placement and
-  rate-limit responses were removed rather than faked.
-- Idempotency/context adapters remain explicitly development-only until durable
-  PostgreSQL configuration/persistence lands.
+- ADR-0013 supersedes ADR-0002 with exact toolchains and a controlled
+  dependency-upgrade process.
+- ADR-0014 supersedes ADR-0011 with executable structured logs and neutral
+  cache-degradation semantics.
+- OpenAPI describes the executable foundation; deferred production behavior is
+  not advertised.
+- Idempotency and context adapters are explicitly development-only pending the
+  PostgreSQL vertical slice.
 
 ## Commands executed
 
-- Mandatory Git inspection, fetch, checkout, pull and `dev...feature` diff.
-- Exact .NET 10.0.302 restore/build/test commands.
-- `pnpm install --frozen-lockfile`, `pnpm run verify`, `pnpm run format`.
-- Clean Python 3.13.14 container install, Ruff and pytest.
-- NuGet/npm/Python vulnerability audits.
-- Docker-backed integration tests with `ADEX_INTEGRATION=1`.
-- `git diff --check` and targeted diff review.
-- Final clean-clone and GitHub Actions commands: pending final commit/push.
+- Mandatory Git status/remote/branch/log/fetch/checkout/pull and
+  `dev...feature` inspection.
+- Exact .NET restore, Release build, unit, contract and container-backed
+  integration tests.
+- pnpm frozen installs, lint, format, type-check, build, tests, neutrality and
+  audit.
+- Python 3.13.14 locked install, Ruff, pytest and shared-vector test.
+- Docker Compose configuration, clean migration, health and Redis degradation.
+- NuGet/npm/Python advisories, Gitleaks, clean-clone checks and
+  `git diff --check`.
+- `gh run watch 29978450774 --exit-status`.
 
 ## Tests and results
 
-- .NET build: success, 0 warnings, 0 errors.
+- .NET Release build: success, 0 warnings and 0 errors.
 - Unit: 73 passed.
 - Contract: 53 passed.
 - Integration without opt-in: 5 passed, 5 skipped explicitly.
-- Integration with real dependencies: 10 passed.
-- TypeScript: 67 passed; lint, type-check, build, format and neutrality passed.
-- Python 3.13.14 clean container: 33 passed; Ruff lint/format passed.
+- Integration with real PostgreSQL and Redis: 10 passed.
+- TypeScript: 67 passed; lint, format, type-check, builds and neutrality passed.
+- Python 3.13.14: 33 passed; Ruff lint/format passed.
+- Clean clone at `23b40b9`: fresh-store frozen pnpm install downloaded all 213
+  packages and full Node verification passed.
 - NuGet/npm/Python dependency audits: no known vulnerabilities.
-- Final GitHub Actions run: pending final push.
+- GitHub Actions run 29978450774: `success`; every job passed.
 
 ## Known failures
 
-None in the completed local validation. The first local Python clean check found
-one formatting violation in the new policy-vector test; it was formatted and
-the repeated exact-toolchain check passed.
+No current failure. Historical regressions were corrected and revalidated:
+
+- Ruff initially found one formatting violation in the shared-vector test.
+- CI run 29978287206 rejected newly published `happy-dom 20.11.1`; the specific
+  mature-peer constraint fixed the clean resolution while preserving the
+  minimum-release-age policy.
 
 ## Risks and unresolved questions
 
-- FND-011 is not closed until the final GitHub Actions run is green.
-- In-memory idempotency is neither durable nor shared across processes. The
-  PostgreSQL adapter must enforce `(tenant_id, idempotency_key)` uniqueness and
-  the 24-hour retention policy.
-- Context allow-lists are tenant-scoped development configuration; placement
-  scoping/versioning belongs with the durable placement configuration task.
-- Redis is not yet a read-through application cache. The current degraded
-  metric measures dependency observations, not affected decision volume.
+- In-memory idempotency is not durable or shared across processes.
+- Context allow-lists are tenant-scoped development configuration; durable
+  placement scoping/versioning remains future work.
+- Redis is not yet a read-through application cache.
+- GitHub emits non-blocking Node 20 deprecation annotations for current action
+  majors; schedule their maintenance upgrade.
 
 ## Recommended next task
 
-After final CI is green, merge readiness can be reassessed. The next product
-task should implement the durable PostgreSQL vertical slice and RLS without
-regressing the executable contract controls added here.
+Perform final human validation of Task 003 and, if accepted, integrate
+`feature/001-foundation` into `dev` through the repository's protected review
+process. After integration, begin the separately scoped durable PostgreSQL
+vertical slice and RLS task.
 
 ## Paths the next agent should read first
 

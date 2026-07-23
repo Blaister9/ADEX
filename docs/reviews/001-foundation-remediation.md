@@ -1,77 +1,100 @@
-# Task 003 — Foundation remediation
+# Foundation remediation 001
 
-- Date: 2026-07-22
-- Branch: `feature/001-foundation`
-- Implementation commits: `da9e99e`, `fd7dc89`
-- Review source: `docs/reviews/001-foundation-review.md`
-- Scope: all findings FND-001 through FND-011
+## Estado inicial
 
-## Outcome
+Task 003 remediated the adversarial foundation review on the existing
+`feature/001-foundation` branch. The initial tree was clean, the branch contained
+the review commit, and `main` and `dev` both remained at `cc586fa`.
 
-All BLOCKER, HIGH, MEDIUM and LOW findings were corrected locally. FND-011 is
-closed only when GitHub Actions completes on the final pushed commit; the final
-run URL and conclusion are recorded below after push.
+## Commit de revisión utilizado
 
-## Finding disposition
+`deaf78a1227b4b0df96c7ed04adb6d636176cb02`
 
-| Finding | Severity | Status | Remediation and objective evidence |
-| --- | --- | --- | --- |
-| FND-001 | BLOCKER | Resolved | Request DTOs capture unmapped members and boundary validation returns `422 unknown_field` with JSON Pointers. Contract tests cover decision root, nested alternative, event root, and every applicable published invalid request example. |
-| FND-002 | HIGH | Resolved | Added tenant-scoped 24-hour decision idempotency with canonical SHA-256 request fingerprints and per-key serialization. Same key/body replays the complete original response; changed body returns `409 idempotency-key-reused`; other tenants are independent. Tests cover sequential, conflict, tenant, 16 concurrent retries and expiry. The adapter is explicitly development-only/in-memory. |
-| FND-003 | HIGH | Resolved | Added `IContextKeyPolicy` and configured tenant-specific allow-lists. The privacy-safe base keys are shared; two reference tenants have different extensions. Syntactically valid undeclared `email` is rejected, and cross-tenant key tests prove isolation. |
-| FND-004 | MEDIUM | Resolved | The executable OpenAPI no longer advertises deferred `403`, `404` or `429` behavior, and its key description explicitly identifies the development adapter. OpenAPI tests assert the exact status sets. Architecture docs distinguish target lifecycle from executable foundation. Origin, placement configuration and rate limiting remain explicit roadmap work, not current API claims. |
-| FND-005 | MEDIUM | Resolved | Event `properties` are measured after canonical JSON serialization in UTF-8 and capped at 4,096 bytes. Tests accept exactly 4,096, reject 4,097 and reject a multibyte payload whose UTF-16 character count would understate its byte size. |
-| FND-006 | MEDIUM | Resolved | The hosted API receives all applicable invalid request examples. Runtime decision, event and problem responses are evaluated against the published JSON Schemas with external common-schema references and format assertions. Exact OpenAPI status tests cover executable operations. Removing an output field, accepting an unknown request field or changing a documented status now fails contract tests. |
-| FND-007 | MEDIUM | Resolved | Added shared `uniform-random-policy-vectors.json` with ordered alternatives, seed, expected selection and propensity. C# and Python consume the same vectors; changes to modulo, order or propensity fail at least one side. |
-| FND-008 | MEDIUM | Resolved | Exact pins: .NET SDK 10.0.302 with roll-forward disabled, ASP.NET Core 10.0.10, Node 22.22.3, pnpm 11.6.0 and Python 3.13.14. Python direct/transitive test dependencies are exact in `requirements-dev.lock`; pytest is 9.1.1. ADR-0013 records current support phases and upgrade policy. Clean Python 3.13.14 and pnpm installs passed; NuGet, npm and Python audits reported no known vulnerabilities. |
-| FND-009 | MEDIUM | Resolved | Added OpenTelemetry logging, one structured bounded-cardinality request event, and an in-memory exporter test for correlation/tenant/route/status/duration. `adex.cache.degraded` increments on the executable Redis-unavailable readiness path and a meter-listener test checks the count/tags. ADR-0014 corrects the metric semantics: it measures optional-dependency degradation, not a nonexistent PostgreSQL fallback. |
-| FND-010 | LOW | Resolved | Redis health details now say ADEX continues without cache acceleration. Integration tests prohibit a PostgreSQL claim in both unreachable and unconfigured Redis results. |
-| FND-011 | NOTE | Pending final CI record | The temporal minimum-release-age policy was not weakened. A clean frozen pnpm install passes. Final GitHub Actions run is recorded after push. |
+## Resumen de correcciones
 
-## Validation evidence
+All eleven findings were reproduced or directly verified. The API now rejects
+unknown request members, enforces tenant-scoped context keys and 24-hour
+decision idempotency, measures event properties as serialized UTF-8, and
+publishes only executable response statuses. Hosted contract tests exercise
+published invalid examples and runtime JSON Schema responses. C# and Python
+share deterministic policy vectors. Toolchains and Python dependencies are
+exactly pinned. OpenTelemetry logging and cache-degradation semantics are
+executable and tested. Redis readiness text is neutral. The supply-chain age
+failure was resolved without weakening the policy by constraining Vitest's
+optional `happy-dom` peer to a mature release.
 
-Executed from `C:\Proyectos\ADEX` unless noted:
+## Matriz de resolución
 
-- .NET SDK `10.0.302` restore/build: success, zero warnings and zero errors.
+| ID | Severidad | Estado | Causa raíz | Archivos modificados | Prueba añadida o ejecutada | Criterio de cierre | Evidencia |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| FND-001 | BLOCKER | RESOLVED | ASP.NET deserialization silently discarded unmapped JSON members. | `PublicContracts.cs`, `RequestValidation.cs`, decision/event contract tests | Hosted invalid examples and root/nested unknown-field tests | Every published invalid example returns the documented `422` error. | 53 contract tests passed; CI 29978450774 green. |
+| FND-002 | HIGH | RESOLVED | Decision retry semantics had no idempotency port or key/body conflict handling. | `IDecisionIdempotencyStore.cs`, `InMemoryDecisionIdempotencyStore.cs`, `RequestDecision.cs`, `DecisionEndpoints.cs` | Replay, conflict, tenant isolation, 16-way concurrency and expiry tests | Same tenant/key/body replays; changed body is `409`; scope and 24-hour expiry are explicit. | 73 unit and 53 contract tests passed. |
+| FND-003 | HIGH | RESOLVED | Context validation used one hard-coded global list. | `IContextKeyPolicy.cs`, `ConfiguredContextKeyPolicy.cs`, development configuration | Two-tenant allow-list and undeclared-email rejection tests | Allowed context is tenant-specific and undeclared keys are rejected. | Cross-tenant contract tests passed. |
+| FND-004 | MEDIUM | RESOLVED | OpenAPI advertised deferred `403`, `404` and `429` behavior. | `adex-public-v1.yaml`, contract package/readmes, architecture docs | Exact operation response-set tests | The executable contract contains only implemented statuses and labels development adapters. | OpenAPI tests and 67 TypeScript tests passed. |
+| FND-005 | MEDIUM | RESOLVED | The event limit used an imprecise representation instead of serialized UTF-8 bytes. | `RequestValidation.cs`, `EventContractTests.cs` | Exact 4096/4097-byte and multibyte tests | Exactly 4096 bytes passes; any larger serialized object fails. | Hosted contract tests passed. |
+| FND-006 | MEDIUM | RESOLVED | Static schema checks did not prove runtime request/response conformance. | `PublishedInvalidExampleTests.cs`, `RuntimeResponseSchemaTests.cs`, contract test dependencies | Hosted invalid examples and JSON Schema response evaluation | Runtime decision, event and problem bodies validate and documented failures are executable. | 53 contract tests passed. |
+| FND-007 | MEDIUM | RESOLVED | C# and Python policy implementations had no shared behavioral oracle. | `uniform-random-policy-vectors.json`, `CrossLanguagePolicyTests.cs`, `test_policy_vectors.py` | Shared seed/selection/propensity vectors in both runtimes | Both implementations consume the same deterministic vectors. | 73 unit and 33 Python tests passed; CI simulator job green. |
+| FND-008 | MEDIUM | RESOLVED | Floating toolchains and Python dependency ranges prevented exact reproduction. | `global.json`, `.nvmrc`, `.python-version`, `package.json`, `requirements-dev.lock`, CI, ADR-0013 | Clean exact-toolchain installs and three ecosystem audits | SDKs and direct/transitive Python test dependencies are exact; security upgrade policy is recorded. | .NET 10.0.302, Node 22.22.3, pnpm 11.6.0 and Python 3.13.14 passed; no known vulnerabilities. |
+| FND-009 | MEDIUM | RESOLVED | Observability claims exceeded executable signals and described a nonexistent fallback. | request logging/telemetry files, `ObservabilityContractTests.cs`, ADR-0014 | In-memory log exporter and meter-listener tests | Structured request log fields and truthful cache-degradation count/tags are tested. | Contract observability tests and CI passed. |
+| FND-010 | LOW | RESOLVED | Redis health detail falsely implied PostgreSQL fallback. | `RedisDependencyProbe.cs`, `DependencyProbeTests.cs` | Unconfigured and unreachable Redis integration assertions | Detail states operation continues without cache acceleration and makes no fallback claim. | 10 container-backed integration tests passed. |
+| FND-011 | NOTE | RESOLVED | Vitest auto-resolved newly published `happy-dom 20.11.1`, which violated pnpm's minimum-release-age policy in a fresh CI environment; the first local store had a cached policy result. | `pnpm-workspace.yaml`, `pnpm-lock.yaml` | Fresh-store frozen install, full Node verification and GitHub Actions | The age control stays enabled and a mature compatible peer resolution produces a reproducible frozen install. | Clean clone at `23b40b9` downloaded all 213 packages and passed; CI 29978450774 green. |
+
+## Validaciones locales
+
+- .NET 10.0.302 Release build: 0 warnings, 0 errors.
 - Unit tests: 73 passed.
 - Contract tests: 53 passed.
-- Integration tests without opt-in: 5 passed, 5 explicitly skipped.
-- Integration tests with `ADEX_INTEGRATION=1`: 10 passed against healthy
-  PostgreSQL and Redis containers.
-- `pnpm install --frozen-lockfile`: success.
-- `pnpm run verify`: 67 tests passed plus lint, type-check, builds and domain
-  neutrality.
-- `pnpm run format`: success.
-- Clean `python:3.13.14-slim`: locked install, Ruff lint/format and 33 tests
-  passed.
-- `pip-audit -r requirements-dev.lock`: no known vulnerabilities.
-- `dotnet list ... --vulnerable --include-transitive`: no vulnerable packages.
-- `pnpm audit --audit-level high`: no known vulnerabilities.
-- `git diff --check`: clean.
+- Integration without opt-in: 5 passed, 5 explicitly skipped.
+- Integration with PostgreSQL and Redis: 10 passed.
+- TypeScript: lint, format, type-check and builds passed; 67 tests passed.
+- Python 3.13.14: Ruff lint/format passed; 33 tests passed.
+- Domain-neutrality check and `docker compose config` passed.
+- PostgreSQL/Redis startup, clean migration, health, missing-Redis,
+  tenant-isolation, idempotency, invalid-payload and missing-credential paths
+  passed through the local and CI suites.
+- Gitleaks passed.
+- NuGet, npm and PyPI audits reported no known vulnerabilities.
+- `git diff --check` passed.
 
-## Architecture decisions
+## Validación desde entorno limpio
 
-- ADR-0013 supersedes ADR-0002 for exact, reproducible toolchains and the
-  controlled dependency-upgrade process.
-- ADR-0014 supersedes ADR-0011 to make foundation logging and cache-degradation
-  semantics truthful and executable.
-- No deferred production capability was disguised as complete: PostgreSQL
-  persistence/RLS, origin enforcement, placement configuration and rate
-  limiting remain roadmap items.
+The pushed commit `23b40b960cd5d864eaf8e2e5532685ad9c5d2f83` was cloned to
+`C:\Users\santi\AppData\Local\Temp\adex-remediation-clean-23b40b9`. With Node
+22.22.3 and pnpm 11.6.0, `pnpm install --frozen-lockfile` used a new store,
+downloaded all 213 packages, passed the release-age policy, and `pnpm verify`
+passed all 67 tests plus lint, type-check, builds and domain neutrality. An
+earlier clean clone also passed the complete .NET and Python exact-toolchain
+suites; GitHub Actions independently repeated every workflow job from a clean
+runner.
 
-## Final CI
+## Resultado de GitHub Actions
 
-- Commit: pending final push
-- Run: pending final push
-- Conclusion: pending final push
+- Commit: `23b40b960cd5d864eaf8e2e5532685ad9c5d2f83`
+- Run: `https://github.com/Blaister9/ADEX/actions/runs/29978450774`
+- Conclusion: `success`
+- Jobs: .NET, TypeScript, simulator, dependency report, infrastructure and
+  secret scan all passed.
 
-## Residual risks
+## Regresiones encontradas durante la corrección
 
-- Decision idempotency and context configuration use development-only,
-  process-local adapters until the PostgreSQL task implements durable,
-  multi-instance semantics.
-- `adex.cache.degraded` currently measures readiness observations. There is no
-  honest per-request cache-bypass count until a real read-through adapter
-  exists.
-- Product capabilities already deferred by the foundation review remain
-  deferred; none is presented as remediated by this task.
+- The first clean Python run found one Ruff formatting violation in the new
+  policy-vector test; formatting and the repeated clean run passed.
+- CI run `29978287206` exposed `happy-dom 20.11.1` as newer than the minimum
+  release age. Moving the specific mature-version constraint to
+  `pnpm-workspace.yaml` regenerated the lock without weakening the policy.
+
+## Riesgos residuales
+
+- Decision idempotency and context configuration are explicitly
+  development-only and process-local until durable PostgreSQL adapters exist.
+- `adex.cache.degraded` measures dependency observations, not decision volume,
+  until a real read-through cache exists.
+- GitHub reports non-blocking Node 20 deprecation annotations for
+  `actions/checkout@v4` (and other current action majors). Updating action
+  majors is a maintenance task; all jobs currently execute successfully.
+- Origin enforcement, durable placement configuration and rate limiting remain
+  planned production capabilities and are not represented as implemented.
+
+## Recomendación final
+
+READY FOR FINAL VALIDATION
