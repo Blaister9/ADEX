@@ -58,7 +58,8 @@ services:
     restart: unless-stopped
     # Redis is optional acceleration and must be safe to lose (ADR-0004):
     # persistence is off, so nothing here can quietly become a system of record.
-    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru"]
+    command:
+      ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory-policy", "allkeys-lru"]
     ports:
       - "127.0.0.1:${REDIS_PORT:-56379}:6379"
     healthcheck:

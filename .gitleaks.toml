@@ -44,3 +44,18 @@ paths = [
   '''^packages/contracts/examples/''',
   '''^tests/fixtures/''',
 ]
+
+[[allowlists]]
+description = """
+Development and test tenant keys. `pk_dev_*` exists only in
+appsettings.Development.json and the API refuses to start with such keys outside
+the Development environment; `pk_test_*` exists only inside the contract test
+suite. Both appear in documented curl examples, which is the point of them.
+
+Matched by value rather than by file, so a real key in the same file would still
+be reported.
+"""
+regexTarget = "match"
+regexes = [
+  '''pk_(dev|test)_[a-z0-9_]+''',
+]
