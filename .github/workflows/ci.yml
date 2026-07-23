@@ -1,0 +1,229 @@
+name: CI
+
+# Every job below runs the same command a developer runs locally. If a command
+# here has no local equivalent in README.md, one of the two is wrong.
+
+on:
+  push:
+    branches: ["main", "dev", "feature/**", "bootstrap/**", "fix/**"]
+  pull_request:
+    branches: ["main", "dev"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: "true"
+
+jobs:
+  dotnet:
+    name: .NET build and tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: adex
+          POSTGRES_USER: adex
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          PGTZ: UTC
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U adex -d adex"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7.4-alpine
+        ports: ["6379:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # Version comes from global.json, so the pin lives in one place.
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore Adex.slnx
+
+      - name: Build
+        # Warnings are errors (Directory.Build.props); no extra flag needed.
+        run: dotnet build Adex.slnx -c Release --no-restore
+
+      - name: Unit and contract tests
+        run: |
+          dotnet test tests/unit/Adex.UnitTests -c Release --no-build
+          dotnet test tests/contract/Adex.ContractTests -c Release --no-build
+
+      - name: Apply the bootstrap migration
+        env:
+          PGPASSWORD: ci-only-not-a-secret
+        run: psql -h 127.0.0.1 -p 5432 -U adex -d adex -v ON_ERROR_STOP=1 -f infra/local/migrations/0001_bootstrap.sql
+
+      - name: Integration tests against real dependencies
+        env:
+          ADEX_INTEGRATION: "1"
+          ConnectionStrings__Postgres: "Host=127.0.0.1;Port=5432;Database=adex;Username=adex;Password=ci-only-not-a-secret"
+          ConnectionStrings__Redis: "127.0.0.1:6379"
+        run: dotnet test tests/integration/Adex.IntegrationTests -c Release --no-build
+
+  node:
+    name: TypeScript build, lint and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      # Version comes from .nvmrc, so the pin lives in one place.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm run lint
+
+      - name: Format
+        run: pnpm run format
+
+      - name: Type-check
+        run: pnpm run typecheck
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Tests, including contract validation
+        run: pnpm run test
+
+      - name: Domain neutrality
+        # The core must contain no vertical vocabulary (AGENTS.md invariant 1).
+        run: pnpm run check:domain-neutrality
+
+  python:
+    name: Simulator lint and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: simulation/adex-simulator
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install
+        run: python -m pip install -e ".[dev]"
+
+      - name: Lint
+        run: python -m ruff check .
+
+      - name: Format
+        run: python -m ruff format --check .
+
+      - name: Tests, including the cross-language seed vectors
+        run: python -m pytest
+
+  infra:
+    name: Infrastructure configuration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate the compose file
+        # .env.example holds only local development placeholders; the compose
+        # file has no working credential of its own by design.
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Migration filenames are well formed and uniquely numbered
+        # Migrations are applied in lexical order (ADR-0010), so the numbering is
+        # load-bearing: two files sharing a number apply in an undefined order.
+        run: |
+          set -euo pipefail
+          for file in infra/local/migrations/*.sql; do
+            name=$(basename "$file")
+            if ! printf '%s' "$name" | grep -Eq '^[0-9]{4}_[a-z0-9_]+\.sql$'; then
+              echo "Migration '$name' must match NNNN_snake_case_description.sql"
+              exit 1
+            fi
+          done
+          duplicates=$(basename -a infra/local/migrations/*.sql | cut -d_ -f1 | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "Duplicate migration numbers: $duplicates"
+            exit 1
+          fi
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gitleaks
+        # Run through the published image rather than the marketplace action, so
+        # no licence key is needed for the scan to be blocking. The allowlist in
+        # .gitleaks.toml covers documented local-development placeholders only.
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:latest \
+            detect --source=/repo --config=/repo/.gitleaks.toml --redact --verbose
+
+  dependencies:
+    name: Dependency vulnerability report
+    runs-on: ubuntu-latest
+    # Reporting, not blocking: an advisory published overnight must not fail an
+    # unrelated pull request. The report is reviewed, and a real exposure becomes
+    # its own change. Revisit once a security owner exists (roadmap task 007).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: NuGet advisories
+        run: |
+          dotnet restore Adex.slnx
+          dotnet list Adex.slnx package --vulnerable --include-transitive
+
+      - name: npm advisories
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm audit --audit-level high
+
+      - name: PyPI advisories
+        run: |
+          python -m pip install pip-audit
+          python -m pip install -e simulation/adex-simulator
+          pip-audit

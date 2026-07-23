@@ -20,7 +20,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "contracts:validate": "vitest run --project contracts",
-    "verify": "pnpm run lint && pnpm run typecheck && pnpm run build && pnpm run test"
+    "check:domain-neutrality": "node scripts/check-domain-neutrality.mjs",
+    "verify": "pnpm run lint && pnpm run typecheck && pnpm run build && pnpm run test && pnpm run check:domain-neutrality"
   },
   "devDependencies": {
     "@eslint/js": "9.39.5",
