@@ -1,0 +1,23 @@
+{
+  "name": "@adex/dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ADEX administration and analytics dashboard. Consumes the public API like any other client.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -p tsconfig.json && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@adex/contracts": "workspace:*",
+    "@types/react": "19.2.17",
+    "@types/react-dom": "19.2.3"
+  }
+}

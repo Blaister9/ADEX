@@ -48,6 +48,17 @@ export default tseslint.config(
     },
   },
   {
+    // Plain JavaScript (config files) is linted without type information.
+    files: ['**/*.js', '**/*.mjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
     files: ['**/*.config.{ts,js}', 'packages/contracts/**/*.ts', '**/*.test.ts', '**/*.test.tsx'],
     languageOptions: {
       globals: { ...globals.node },

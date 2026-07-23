@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.adex.dev/v1/common.schema.json",
+  "title": "ADEX common definitions",
+  "description": "Shared primitive definitions for the ADEX public v1 contract.",
+  "$defs": {
+    "ulid": {
+      "type": "string",
+      "description": "Crockford base32 ULID, 26 characters, without prefix.",
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "tenant_id": {
+      "type": "string",
+      "description": "Opaque tenant identifier.",
+      "pattern": "^ten_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "decision_id": {
+      "type": "string",
+      "description": "Opaque, server-generated decision identifier.",
+      "pattern": "^dec_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "event_id": {
+      "type": "string",
+      "description": "Opaque, client-generated event identifier. Deduplication key, unique per tenant.",
+      "pattern": "^evt_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "subject_id": {
+      "type": "string",
+      "description": "Anonymous, first-party, rotatable, tenant-scoped subject identifier. Never derived from device properties and never personally identifying.",
+      "pattern": "^anon_[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "correlation_id": {
+      "type": "string",
+      "description": "Client- or server-supplied request correlation identifier, echoed on every response.",
+      "minLength": 8,
+      "maxLength": 64,
+      "pattern": "^[A-Za-z0-9._-]{8,64}$"
+    },
+    "placement_key": {
+      "type": "string",
+      "description": "Tenant-unique, human-authored name of a decision point, e.g. 'homepage.primary-cta'.",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]([a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "alternative_key": {
+      "type": "string",
+      "description": "Tenant-unique key of one option that may be selected at a placement.",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]([a-z0-9._-]{0,62}[a-z0-9])?$"
+    },
+    "policy_key": {
+      "type": "string",
+      "description": "Identifier of the selection strategy that produced a decision.",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$"
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "format": "date-time",
+      "description": "RFC 3339 timestamp with an explicit UTC offset. Only 'Z' is accepted; other offsets are rejected rather than converted.",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d{1,9})?Z$"
+    },
+    "context_value": {
+      "description": "A single context signal. Deliberately restricted to low-cardinality, non-identifying values.",
+      "oneOf": [
+        { "type": "string", "maxLength": 256 },
+        { "type": "number" },
+        { "type": "boolean" },
+        { "type": "null" }
+      ]
+    },
+    "context": {
+      "type": "object",
+      "description": "Allow-listed, non-identifying signals describing the situation of a decision. Keys not declared in the tenant's placement configuration are rejected with 422.",
+      "maxProperties": 32,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+      "additionalProperties": { "$ref": "#/$defs/context_value" }
+    },
+    "eligible_alternative": {
+      "type": "object",
+      "description": "One alternative the caller declares eligible for this decision.",
+      "required": ["key"],
+      "additionalProperties": false,
+      "properties": {
+        "key": { "$ref": "#/$defs/alternative_key" }
+      }
+    },
+    "policy_reference": {
+      "type": "object",
+      "description": "The policy and configuration version that produced a decision.",
+      "required": ["key", "version"],
+      "properties": {
+        "key": { "$ref": "#/$defs/policy_key" },
+        "version": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

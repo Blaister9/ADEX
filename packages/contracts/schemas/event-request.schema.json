@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.adex.dev/v1/event-request.schema.json",
+  "title": "Event request",
+  "description": "Body of POST /v1/events. `event_id` is client-generated and is the deduplication key; replaying the same event is a safe no-op (ADR-0012).",
+  "type": "object",
+  "required": ["event_id", "type", "occurred_at"],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": { "$ref": "common.schema.json#/$defs/event_id" },
+    "decision_id": {
+      "description": "The decision this event is a consequence of. Omit or set null for site-wide signals that no placement claimed.",
+      "oneOf": [{ "$ref": "common.schema.json#/$defs/decision_id" }, { "type": "null" }]
+    },
+    "subject_id": { "$ref": "common.schema.json#/$defs/subject_id" },
+    "type": {
+      "type": "string",
+      "description": "Event type. 'impression', 'click', 'lead' and 'purchase' are reserved with fixed meaning; any other value is a tenant-defined type that must be declared in tenant configuration.",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}$"
+    },
+    "occurred_at": {
+      "description": "Client clock. Untrusted: stored as reported, never used in place of the server's received_at. Rejected when more than 5 minutes in the future or more than 7 days in the past.",
+      "$ref": "common.schema.json#/$defs/timestamp_utc"
+    },
+    "properties": {
+      "type": "object",
+      "description": "Optional tenant-defined payload. Must not contain personal data. Total serialized size is limited to 4 KiB by the API.",
+      "maxProperties": 64,
+      "propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,39}$" },
+      "additionalProperties": { "$ref": "common.schema.json#/$defs/context_value" }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.adex.dev/v1/decision-response.schema.json",
+  "title": "Decision response",
+  "description": "Body of a successful POST /v1/decisions. Responses are intentionally NOT closed: within a major version ADEX may add fields, and clients must ignore unknown ones (ADR-0006).",
+  "type": "object",
+  "required": ["decision_id", "alternative_key", "policy", "decided_at"],
+  "properties": {
+    "decision_id": { "$ref": "common.schema.json#/$defs/decision_id" },
+    "alternative_key": { "$ref": "common.schema.json#/$defs/alternative_key" },
+    "policy": { "$ref": "common.schema.json#/$defs/policy_reference" },
+    "decided_at": { "$ref": "common.schema.json#/$defs/timestamp_utc" }
+  }
+}

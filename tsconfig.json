@@ -1,8 +1,8 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./packages/sdk-web" },
-    { "path": "./packages/contracts" },
-    { "path": "./apps/dashboard" }
-  ]
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["vitest.config.ts"]
 }

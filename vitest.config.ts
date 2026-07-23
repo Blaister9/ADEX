@@ -12,7 +12,7 @@ export default defineConfig({
         test: {
           name: 'sdk-web',
           root: './packages/sdk-web',
-          environment: 'happy-dom',
+          environment: 'node',
           include: ['test/**/*.test.ts'],
         },
       },
@@ -29,7 +29,7 @@ export default defineConfig({
         test: {
           name: 'dashboard',
           root: './apps/dashboard',
-          environment: 'happy-dom',
+          environment: 'node',
           include: ['test/**/*.test.tsx'],
         },
       },

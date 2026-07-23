@@ -1,0 +1,10 @@
+{
+  "event_id": "evt_01JQZ9N1R2S3T4V5W6X7Y8Z9A0",
+  "decision_id": null,
+  "type": "purchase",
+  "occurred_at": "2026-07-22T15:41:09Z",
+  "properties": {
+    "currency": "COP",
+    "item_count": 3
+  }
+}

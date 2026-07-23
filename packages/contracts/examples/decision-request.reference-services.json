@@ -1,0 +1,15 @@
+{
+  "placement": "homepage.primary-cta",
+  "subject_id": "anon_01JQZ7H9K2M3N4P5Q6R7S8T9V0",
+  "context": {
+    "device_class": "mobile",
+    "referrer_group": "organic",
+    "locale": "es-CO",
+    "session_ordinal": 1
+  },
+  "eligible_alternatives": [
+    { "key": "request-callback" },
+    { "key": "book-appointment" },
+    { "key": "see-pricing" }
+  ]
+}

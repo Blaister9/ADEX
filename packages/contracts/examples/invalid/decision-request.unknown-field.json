@@ -1,0 +1,5 @@
+{
+  "placement": "homepage.primary-cta",
+  "eligible_alternatives": [{ "key": "variant-a" }],
+  "force_alternative": "variant-a"
+}
