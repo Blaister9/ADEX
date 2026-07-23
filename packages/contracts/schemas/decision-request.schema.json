@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.adex.dev/v1/decision-request.schema.json",
+  "title": "Decision request",
+  "description": "Body of POST /v1/decisions. Requests are validated strictly: unknown properties are rejected so that an integration mistake is visible instead of silent.",
+  "type": "object",
+  "required": ["placement", "eligible_alternatives"],
+  "additionalProperties": false,
+  "properties": {
+    "placement": { "$ref": "common.schema.json#/$defs/placement_key" },
+    "subject_id": {
+      "description": "Optional anonymous subject. Without it a decision is still returned; only subject-level stability and multi-session attribution are unavailable.",
+      "$ref": "common.schema.json#/$defs/subject_id"
+    },
+    "context": { "$ref": "common.schema.json#/$defs/context" },
+    "eligible_alternatives": {
+      "type": "array",
+      "description": "Alternatives the caller declares eligible. Must be a subset of the tenant's configured alternatives for this placement.",
+      "minItems": 1,
+      "maxItems": 50,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/eligible_alternative" }
+    }
+  }
+}

@@ -1,0 +1,61 @@
+# ---------------------------------------------------------------------------
+# ADEX repository ignore rules
+# ---------------------------------------------------------------------------
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.pfx
+secrets.json
+
+# .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.user
+*.suo
+*.userprefs
+.vs/
+TestResults/
+*.trx
+*.coverage
+coverage/
+*.nupkg
+
+# Node / TypeScript
+node_modules/
+dist/
+build/
+.vite/
+*.tsbuildinfo
+.eslintcache
+npm-debug.log*
+pnpm-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+htmlcov/
+.coverage
+
+# Editors / OS
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+
+# Local infrastructure state
+infra/local/data/
+.docker-data/

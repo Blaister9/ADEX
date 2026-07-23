@@ -1,0 +1,20 @@
+{
+  "type": "https://contracts.adex.dev/problems/validation-failed",
+  "title": "The request body failed validation.",
+  "status": 422,
+  "detail": "One or more fields are invalid. See errors.",
+  "instance": "/v1/decisions",
+  "correlation_id": "01JQZ8K3N4P5R6S7T8V9W0X1Y2",
+  "errors": [
+    {
+      "pointer": "/eligible_alternatives/0/key",
+      "code": "pattern",
+      "detail": "Alternative keys must match ^[a-z0-9]([a-z0-9._-]{0,62}[a-z0-9])?$."
+    },
+    {
+      "pointer": "/context/visitor_email",
+      "code": "unknown_context_key",
+      "detail": "Context key 'visitor_email' is not declared for placement 'homepage.primary-cta'."
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>Adex.Application</RootNamespace>
+    <AssemblyName>Adex.Application</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Adex.Domain\Adex.Domain.csproj" />
+  </ItemGroup>
+
+</Project>

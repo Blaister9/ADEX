@@ -1,0 +1,283 @@
+openapi: 3.1.0
+
+info:
+  title: ADEX Public API
+  version: "1.0.0"
+  summary: Adaptive decision and event ingestion API.
+  description: |
+    ADEX selects one of the alternatives a caller declares eligible for a named
+    placement, returns a traceable decision, and ingests the behavioural events
+    that follow.
+
+    This document is hand-authored and is the source of truth for the public
+    HTTP surface (ADR-0006). The ASP.NET Core implementation is validated
+    against it; it is not generated from the implementation.
+
+    Conventions:
+      * JSON bodies use `snake_case`; headers use `X-Adex-*`.
+      * All timestamps are RFC 3339 with an explicit `Z` UTC offset. Other
+        offsets are rejected, never converted.
+      * All identifiers are opaque prefixed strings (`dec_`, `evt_`, `anon_`,
+        `ten_`). Internal database keys are never exposed.
+      * Errors use RFC 9457 `application/problem+json` with the ADEX extensions
+        `correlation_id` and `errors`.
+      * Requests are validated strictly (unknown properties are rejected).
+        Responses may gain fields within a major version; clients must ignore
+        unknown ones.
+  license:
+    name: Proprietary — see repository owner
+  contact:
+    name: ADEX repository
+    url: https://github.com/Blaister9/ADEX
+
+servers:
+  - url: http://localhost:5080
+    description: Local development (docker compose + dotnet run)
+
+tags:
+  - name: decisions
+    description: The online decision path.
+  - name: events
+    description: Idempotent behavioural event ingestion.
+  - name: operations
+    description: Liveness and readiness probes.
+
+security:
+  - PublishableApiKey: []
+
+paths:
+  /v1/decisions:
+    post:
+      tags: [decisions]
+      operationId: requestDecision
+      summary: Select one eligible alternative for a placement.
+      description: |
+        Not idempotent by default: two identical requests are two decisions,
+        because two impressions occurred. Send `Idempotency-Key` to make a retry
+        return the original decision for a bounded window (ADR-0012).
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/decision-request.schema.json"
+            examples:
+              referenceServices:
+                summary: Professional-services reference tenant
+                externalValue: ../examples/decision-request.reference-services.json
+              referenceCatalog:
+                summary: Online-catalog reference tenant (no subject, different domain)
+                externalValue: ../examples/decision-request.reference-catalog.json
+      responses:
+        "200":
+          description: A decision was made and persisted.
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "../schemas/decision-response.schema.json"
+              examples:
+                referenceServices:
+                  externalValue: ../examples/decision-response.reference-services.json
+                referenceCatalog:
+                  externalValue: ../examples/decision-response.reference-catalog.json
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+
+  /v1/events:
+    post:
+      tags: [events]
+      operationId: recordEvent
+      summary: Ingest one behavioural event.
+      description: |
+        Idempotent on `(tenant, event_id)`. Replaying an event returns `202`
+        with `status: "duplicate"` and changes no state, so clients can retry
+        freely (ADR-0012).
+      parameters:
+        - $ref: "#/components/parameters/CorrelationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "../schemas/event-request.schema.json"
+            examples:
+              referenceServices:
+                summary: Lead attributed to a decision
+                externalValue: ../examples/event-request.reference-services.json
+              referenceCatalog:
+                summary: Site-wide purchase with no decision reference
+                externalValue: ../examples/event-request.reference-catalog.json
+      responses:
+        "202":
+          description: |
+            The event was accepted, or recognised as a replay of an event
+            already stored for this tenant.
+          headers:
+            X-Correlation-Id:
+              $ref: "#/components/headers/CorrelationId"
+          content:
+            application/json:
+              schema:
+                $ref: "../schemas/event-response.schema.json"
+              examples:
+                accepted:
+                  externalValue: ../examples/event-response.accepted.json
+                duplicate:
+                  externalValue: ../examples/event-response.duplicate.json
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/UnprocessableEntity" }
+        "503": { $ref: "#/components/responses/ServiceUnavailable" }
+
+  /health/live:
+    get:
+      tags: [operations]
+      operationId: getLiveness
+      summary: Process liveness. Never touches a dependency.
+      security: []
+      responses:
+        "200":
+          description: The process is running.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReport"
+
+  /health/ready:
+    get:
+      tags: [operations]
+      operationId: getReadiness
+      summary: Readiness, distinguishing required from optional dependencies.
+      description: |
+        Returns `200` with `status: "degraded"` when only optional dependencies
+        (Redis) are unavailable, so a cache outage never drains an instance
+        (ADR-0004, ADR-0011). Returns `503` when a required dependency
+        (PostgreSQL) is unavailable.
+      security: []
+      responses:
+        "200":
+          description: Ready, either `healthy` or `degraded`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReport"
+        "503":
+          description: A required dependency is unavailable.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthReport"
+
+components:
+  securitySchemes:
+    PublishableApiKey:
+      type: apiKey
+      in: header
+      name: X-Adex-Api-Key
+      description: |
+        Tenant-scoped key for the current development adapter. It can only
+        request decisions and emit events. Origin binding, key hashing,
+        rotation, rate limiting and separate secret-key capabilities are not
+        part of this executable foundation contract.
+
+  parameters:
+    CorrelationId:
+      name: X-Correlation-Id
+      in: header
+      required: false
+      description: Client-supplied correlation identifier, echoed on the response. Generated when absent.
+      schema:
+        $ref: "../schemas/common.schema.json#/$defs/correlation_id"
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: false
+      description: |
+        Makes a retried decision request return the original decision for 24
+        hours. Reusing the key with a different body returns `409`.
+      schema:
+        type: string
+        minLength: 8
+        maxLength: 64
+        pattern: "^[A-Za-z0-9._-]{8,64}$"
+
+  headers:
+    CorrelationId:
+      description: The correlation identifier for this request.
+      schema:
+        $ref: "../schemas/common.schema.json#/$defs/correlation_id"
+
+  schemas:
+    HealthReport:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        checks:
+          type: array
+          items:
+            type: object
+            required: [name, status, required]
+            properties:
+              name: { type: string }
+              status:
+                type: string
+                enum: [healthy, degraded, unhealthy]
+              required:
+                type: boolean
+                description: When false, an unhealthy result degrades but does not fail readiness.
+              detail: { type: string }
+
+  responses:
+    BadRequest:
+      description: Malformed request (unparsable JSON, oversized payload, bad header).
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/problem.schema.json"
+    Unauthorized:
+      description: Missing or unknown API key.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/problem.schema.json"
+    Conflict:
+      description: |
+        No alternative remained eligible after constraints, or an
+        `Idempotency-Key` was reused with a different body.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/problem.schema.json"
+          examples:
+            noEligibleAlternatives:
+              externalValue: ../examples/problem.no-eligible-alternatives.json
+    UnprocessableEntity:
+      description: The body parsed but failed validation.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/problem.schema.json"
+          examples:
+            validationFailed:
+              externalValue: ../examples/problem.validation.json
+    ServiceUnavailable:
+      description: |
+        A required dependency is unavailable. ADEX fails closed rather than
+        serving an unlogged decision; the SDK falls back to its client-side
+        default.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "../schemas/problem.schema.json"

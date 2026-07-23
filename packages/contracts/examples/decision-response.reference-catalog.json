@@ -1,0 +1,9 @@
+{
+  "decision_id": "dec_01JQZ9M5Q7R8S9T0V1W2X3Y4Z5",
+  "alternative_key": "order-by-popularity",
+  "policy": {
+    "key": "ab-split",
+    "version": 3
+  },
+  "decided_at": "2026-07-22T14:05:47Z"
+}

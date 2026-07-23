@@ -1,0 +1,9 @@
+{
+  "placement": "catalog.recommendation-slot",
+  "context": {
+    "device_class": "desktop",
+    "referrer_group": "paid",
+    "page_group": "category-listing"
+  },
+  "eligible_alternatives": [{ "key": "order-by-popularity" }, { "key": "order-by-margin" }]
+}

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Adex.UnitTests</RootNamespace>
+    <AssemblyName>Adex.UnitTests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Adex.Domain\Adex.Domain.csproj" />
+    <ProjectReference Include="..\..\..\src\Adex.Application\Adex.Application.csproj" />
+    <ProjectReference Include="..\..\..\src\Adex.Infrastructure\Adex.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+  </ItemGroup>
+
+</Project>

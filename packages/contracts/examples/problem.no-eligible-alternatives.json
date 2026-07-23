@@ -1,0 +1,8 @@
+{
+  "type": "https://contracts.adex.dev/problems/no-eligible-alternatives",
+  "title": "No alternative remained eligible after constraints were applied.",
+  "status": 409,
+  "detail": "All declared alternatives were excluded by placement constraints. ADEX never substitutes an alternative that the caller did not declare.",
+  "instance": "/v1/decisions",
+  "correlation_id": "01JQZ9M5Q7R8S9T0V1W2X3Y4Z5"
+}

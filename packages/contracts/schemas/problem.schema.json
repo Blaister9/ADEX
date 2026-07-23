@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.adex.dev/v1/problem.schema.json",
+  "title": "Problem details (RFC 9457)",
+  "description": "Every non-2xx response uses application/problem+json with the ADEX extensions `correlation_id` and `errors`.",
+  "type": "object",
+  "required": ["type", "title", "status"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "format": "uri-reference",
+      "description": "Stable problem type identifier, e.g. 'https://contracts.adex.dev/problems/no-eligible-alternatives'. Clients branch on this, never on the human-readable title."
+    },
+    "title": { "type": "string", "maxLength": 200 },
+    "status": { "type": "integer", "minimum": 400, "maximum": 599 },
+    "detail": {
+      "type": "string",
+      "maxLength": 2000,
+      "description": "Human-readable explanation. Never contains internal identifiers, SQL, stack traces or another tenant's data."
+    },
+    "instance": { "type": "string", "format": "uri-reference" },
+    "correlation_id": { "$ref": "common.schema.json#/$defs/correlation_id" },
+    "errors": {
+      "type": "array",
+      "description": "Field-level validation failures. Present for 422 responses.",
+      "maxItems": 100,
+      "items": {
+        "type": "object",
+        "required": ["pointer", "code"],
+        "properties": {
+          "pointer": {
+            "type": "string",
+            "description": "RFC 6901 JSON Pointer into the request body, e.g. '/eligible_alternatives/0/key'."
+          },
+          "code": {
+            "type": "string",
+            "description": "Machine-readable failure code, e.g. 'pattern', 'required', 'unknown_context_key'.",
+            "pattern": "^[a-z][a-z0-9_]{0,63}$"
+          },
+          "detail": { "type": "string", "maxLength": 500 }
+        }
+      }
+    }
+  }
+}

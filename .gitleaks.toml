@@ -1,0 +1,61 @@
+# Gitleaks configuration for ADEX.
+#
+# Starts from the full default rule set and adds a narrow allowlist. Every entry
+# below is a file whose "credentials" are local development placeholders that a
+# reader is meant to see — removing them would make the setup instructions worse
+# without making anything safer.
+#
+# Nothing here weakens the rule that real secrets are never committed. They live
+# in the environment or a secret store (ADR-0008, `.env.example`).
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = """
+Local development placeholders. `.env.example` is the template a developer copies
+to a git-ignored `.env`; `appsettings.Development.json` only ever runs in the
+Development environment, and the API refuses to start with its tenant keys
+outside it.
+"""
+paths = [
+  '''^\.env\.example$''',
+  '''^src/Adex\.Api/appsettings\.Development\.json$''',
+]
+
+[[allowlists]]
+description = """
+Docker Compose reads its credentials from `.env` through variable interpolation
+and ships no working default of its own; the CI workflow uses a throwaway
+password for an ephemeral service container.
+"""
+paths = [
+  '''^docker-compose\.yml$''',
+  '''^\.github/workflows/ci\.yml$''',
+]
+
+[[allowlists]]
+description = """
+Contract examples and test fixtures. These are illustrative payloads and seed
+vectors, not credentials: the publishable API key in the examples is public by
+design (see the security scheme in the OpenAPI document).
+"""
+paths = [
+  '''^packages/contracts/examples/''',
+  '''^tests/fixtures/''',
+]
+
+[[allowlists]]
+description = """
+Development and test tenant keys. `pk_dev_*` exists only in
+appsettings.Development.json and the API refuses to start with such keys outside
+the Development environment; `pk_test_*` exists only inside the contract test
+suite. Both appear in documented curl examples, which is the point of them.
+
+Matched by value rather than by file, so a real key in the same file would still
+be reported.
+"""
+regexTarget = "match"
+regexes = [
+  '''pk_(dev|test)_[a-z0-9_]+''',
+]

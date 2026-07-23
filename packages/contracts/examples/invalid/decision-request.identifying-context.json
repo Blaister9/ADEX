@@ -1,0 +1,7 @@
+{
+  "placement": "homepage.primary-cta",
+  "eligible_alternatives": [{ "key": "variant-a" }],
+  "context": {
+    "Visitor-Email": "someone@example.test"
+  }
+}

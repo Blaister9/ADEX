@@ -1,0 +1,41 @@
+{
+  "policy_key": "uniform-random",
+  "policy_version": 1,
+  "vectors": [
+    {
+      "name": "two alternatives first bucket",
+      "eligible_alternatives": ["variant-a", "variant-b"],
+      "seed": 42,
+      "expected_alternative": "variant-a",
+      "expected_propensity": 0.5
+    },
+    {
+      "name": "two alternatives second bucket",
+      "eligible_alternatives": ["variant-a", "variant-b"],
+      "seed": 43,
+      "expected_alternative": "variant-b",
+      "expected_propensity": 0.5
+    },
+    {
+      "name": "ordered three way selection",
+      "eligible_alternatives": ["alpha", "beta", "gamma"],
+      "seed": 8,
+      "expected_alternative": "gamma",
+      "expected_propensity": 0.3333333333333333
+    },
+    {
+      "name": "maximum unsigned seed",
+      "eligible_alternatives": ["north", "south", "east", "west"],
+      "seed": 4294967295,
+      "expected_alternative": "west",
+      "expected_propensity": 0.25
+    },
+    {
+      "name": "single eligible alternative",
+      "eligible_alternatives": ["only-option"],
+      "seed": 20260722,
+      "expected_alternative": "only-option",
+      "expected_propensity": 1.0
+    }
+  ]
+}

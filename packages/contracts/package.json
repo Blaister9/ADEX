@@ -1,0 +1,30 @@
+{
+  "name": "@adex/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Source of truth for the ADEX public HTTP contract: OpenAPI, JSON Schemas, examples and TypeScript types.",
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./openapi/*": "./openapi/*",
+    "./schemas/*": "./schemas/*",
+    "./examples/*": "./examples/*"
+  },
+  "types": "./src/index.ts",
+  "files": [
+    "src",
+    "openapi",
+    "schemas",
+    "examples"
+  ],
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@apidevtools/swagger-parser": "12.1.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
+    "yaml": "2.9.0"
+  }
+}
