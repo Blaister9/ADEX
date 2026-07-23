@@ -37,5 +37,5 @@ public static class AdexTelemetry
     public static Counter<long> CacheDegraded { get; } = Meter.CreateCounter<long>(
         "adex.cache.degraded",
         unit: "{occurrence}",
-        description: "Times an optional cache was bypassed and PostgreSQL answered instead.");
+        description: "Observations that the optional cache is unavailable or not configured.");
 }

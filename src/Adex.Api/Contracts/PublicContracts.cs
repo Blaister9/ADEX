@@ -16,13 +16,21 @@ namespace Adex.Api.Contracts;
 /// assert that the running API still matches it.
 /// </summary>
 public sealed record EligibleAlternativeDto(
-    [property: JsonPropertyName("key")] string? Key);
+    [property: JsonPropertyName("key")] string? Key)
+{
+    [JsonExtensionData]
+    public IDictionary<string, JsonElement>? UnmappedProperties { get; init; }
+}
 
 public sealed record DecisionRequestDto(
     [property: JsonPropertyName("placement")] string? Placement,
     [property: JsonPropertyName("eligible_alternatives")] IReadOnlyList<EligibleAlternativeDto>? EligibleAlternatives,
     [property: JsonPropertyName("subject_id")] string? SubjectId = null,
-    [property: JsonPropertyName("context")] IReadOnlyDictionary<string, JsonElement>? Context = null);
+    [property: JsonPropertyName("context")] IReadOnlyDictionary<string, JsonElement>? Context = null)
+{
+    [JsonExtensionData]
+    public IDictionary<string, JsonElement>? UnmappedProperties { get; init; }
+}
 
 public sealed record PolicyReferenceDto(
     [property: JsonPropertyName("key")] string Key,
@@ -40,7 +48,11 @@ public sealed record EventRequestDto(
     [property: JsonPropertyName("occurred_at")] string? OccurredAt,
     [property: JsonPropertyName("decision_id")] string? DecisionId = null,
     [property: JsonPropertyName("subject_id")] string? SubjectId = null,
-    [property: JsonPropertyName("properties")] IReadOnlyDictionary<string, JsonElement>? Properties = null);
+    [property: JsonPropertyName("properties")] IReadOnlyDictionary<string, JsonElement>? Properties = null)
+{
+    [JsonExtensionData]
+    public IDictionary<string, JsonElement>? UnmappedProperties { get; init; }
+}
 
 public sealed record EventResponseDto(
     [property: JsonPropertyName("event_id")] string EventId,

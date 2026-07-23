@@ -17,7 +17,7 @@ public static class Problems
 
     public const string ValidationFailed = TypeBase + "/validation-failed";
     public const string NoEligibleAlternatives = TypeBase + "/no-eligible-alternatives";
-    public const string UnknownPlacement = TypeBase + "/unknown-placement";
+    public const string IdempotencyKeyReused = TypeBase + "/idempotency-key-reused";
     public const string Unauthenticated = TypeBase + "/unauthenticated";
     public const string DependencyUnavailable = TypeBase + "/dependency-unavailable";
     public const string MalformedRequest = TypeBase + "/malformed-request";

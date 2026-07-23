@@ -28,10 +28,7 @@ export const PROBLEM_TYPE_BASE = 'https://contracts.adex.dev/problems' as const;
 export const PROBLEM_TYPES = {
   validationFailed: `${PROBLEM_TYPE_BASE}/validation-failed`,
   noEligibleAlternatives: `${PROBLEM_TYPE_BASE}/no-eligible-alternatives`,
-  unknownPlacement: `${PROBLEM_TYPE_BASE}/unknown-placement`,
-  originNotAllowed: `${PROBLEM_TYPE_BASE}/origin-not-allowed`,
   idempotencyKeyReused: `${PROBLEM_TYPE_BASE}/idempotency-key-reused`,
-  rateLimited: `${PROBLEM_TYPE_BASE}/rate-limited`,
   dependencyUnavailable: `${PROBLEM_TYPE_BASE}/dependency-unavailable`,
 } as const;
 

@@ -1,6 +1,7 @@
 using Adex.Api.Endpoints;
 using Adex.Api.Http;
 using Adex.Api.Telemetry;
+using Adex.Application.Abstractions;
 using Adex.Infrastructure.DependencyInjection;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,7 @@ builder.Services.AddProblemDetails(options => options.CustomizeProblemDetails = 
     context.ProblemDetails.Extensions.Remove("traceId");
 });
 builder.Services.AddExceptionHandler<AdexExceptionHandler>();
+builder.Services.AddSingleton<ICacheDegradationSink, OpenTelemetryCacheDegradationSink>();
 builder.Services.AddAdexTelemetry(builder.Configuration);
 builder.Services.AddAdexInfrastructure(builder.Configuration, isDevelopment);
 
@@ -35,6 +37,7 @@ WebApplication app = builder.Build();
 app.Services.ValidateAdexConfiguration(isDevelopment);
 
 app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
 

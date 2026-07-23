@@ -196,4 +196,75 @@ public sealed class EventContractTests(AdexApiFactory factory) : IClassFixture<A
 
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
+
+    [Fact]
+    public async Task Rejects_an_unknown_request_field()
+    {
+        HttpResponseMessage response = await factory.CreateClientFor(AdexApiFactory.TenantAKey)
+            .PostAsJsonAsync("/v1/events", new
+            {
+                event_id = NewEventId(),
+                type = "click",
+                occurred_at = Now(),
+                unexpected = true,
+            });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Enforces_the_exact_4096_byte_serialized_properties_limit()
+    {
+        var properties = Enumerable.Range(0, 15)
+            .ToDictionary(i => $"p{i:00}", _ => new string('x', 256), StringComparer.Ordinal);
+        properties["final"] = string.Empty;
+        int emptyFinalBytes = JsonSerializer.SerializeToUtf8Bytes(properties).Length;
+        properties["final"] = new string('x', 4096 - emptyFinalBytes);
+        Assert.Equal(4096, JsonSerializer.SerializeToUtf8Bytes(properties).Length);
+
+        HttpClient client = factory.CreateClientFor(AdexApiFactory.TenantAKey);
+        HttpResponseMessage atLimit = await client.PostAsJsonAsync("/v1/events", new
+        {
+            event_id = NewEventId(),
+            type = "click",
+            occurred_at = Now(),
+            properties,
+        });
+
+        properties["final"] += "x";
+        HttpResponseMessage overLimit = await client.PostAsJsonAsync("/v1/events", new
+        {
+            event_id = NewEventId(),
+            type = "click",
+            occurred_at = Now(),
+            properties,
+        });
+
+        Assert.Equal(HttpStatusCode.Accepted, atLimit.StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, overLimit.StatusCode);
+        Assert.Equal(
+            "max_bytes",
+            (await ReadAsync(overLimit)).GetProperty("errors").EnumerateArray()
+                .Single(error => error.GetProperty("pointer").GetString() == "/properties")
+                .GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Counts_properties_in_utf8_bytes_not_utf16_characters()
+    {
+        var multibyte = Enumerable.Range(0, 8)
+            .ToDictionary(i => $"p{i:00}", _ => new string('é', 256), StringComparer.Ordinal);
+        Assert.True(JsonSerializer.SerializeToUtf8Bytes(multibyte).Length > 4096);
+
+        HttpResponseMessage response = await factory.CreateClientFor(AdexApiFactory.TenantAKey)
+            .PostAsJsonAsync("/v1/events", new
+            {
+                event_id = NewEventId(),
+                type = "click",
+                occurred_at = Now(),
+                properties = multibyte,
+            });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
 }

@@ -33,6 +33,10 @@ That runs the `contracts` Vitest project, which:
 5. asserts the document and `src/index.ts` agree on paths, the API-key header
    and the documented failure modes.
 
+The .NET contract suite additionally submits every applicable invalid request
+example to the hosted application, so an example rejected by Ajv but accepted
+at runtime fails CI.
+
 ## Conventions worth knowing before editing
 
 **Requests are closed, responses are open.** Request schemas set

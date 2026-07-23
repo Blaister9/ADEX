@@ -1,3 +1,4 @@
+using OpenTelemetry.Logs;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -22,6 +23,18 @@ public static class TelemetryServiceCollectionExtensions
 
         string serviceName = configuration["OTEL_SERVICE_NAME"] ?? "adex-api";
         bool exportEnabled = !string.IsNullOrWhiteSpace(configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
+
+        services.AddLogging(logging => logging.AddOpenTelemetry(options =>
+        {
+            options.IncludeFormattedMessage = true;
+            options.IncludeScopes = true;
+            options.ParseStateValues = true;
+            options.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService(serviceName));
+            if (exportEnabled)
+            {
+                options.AddOtlpExporter();
+            }
+        }));
 
         services
             .AddOpenTelemetry()

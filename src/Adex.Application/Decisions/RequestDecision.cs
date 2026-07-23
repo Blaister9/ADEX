@@ -13,12 +13,15 @@ public sealed record RequestDecisionCommand(
     IReadOnlyList<AlternativeKey> EligibleAlternatives,
     DecisionContext Context,
     SubjectId? Subject = null,
-    string? CorrelationId = null);
+    string? CorrelationId = null,
+    string? IdempotencyKey = null,
+    string? RequestFingerprint = null);
 
 public enum RequestDecisionStatus
 {
     Decided,
     NoEligibleAlternatives,
+    IdempotencyConflict,
 }
 
 public sealed record RequestDecisionResult(RequestDecisionStatus Status, DecisionRecord? Decision)
@@ -43,7 +46,8 @@ public sealed class RequestDecisionHandler(
     IDecisionStore decisionStore,
     IIdentifierGenerator identifiers,
     ISeedSaltProvider saltProvider,
-    IClock clock)
+    IClock clock,
+    IDecisionIdempotencyStore idempotencyStore)
 {
     public async Task<RequestDecisionResult> HandleAsync(
         RequestDecisionCommand command,
@@ -51,6 +55,28 @@ public sealed class RequestDecisionHandler(
     {
         ArgumentNullException.ThrowIfNull(command);
 
+        if (command.IdempotencyKey is not null && command.RequestFingerprint is not null)
+        {
+            IdempotentDecisionResult idempotent = await idempotencyStore.ExecuteAsync(
+                command.Tenant,
+                command.IdempotencyKey,
+                command.RequestFingerprint,
+                clock.UtcNow,
+                token => HandleCoreAsync(command, token),
+                cancellationToken).ConfigureAwait(false);
+
+            return idempotent.Status == IdempotentDecisionStatus.Conflict
+                ? new RequestDecisionResult(RequestDecisionStatus.IdempotencyConflict, null)
+                : idempotent.Result!;
+        }
+
+        return await HandleCoreAsync(command, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<RequestDecisionResult> HandleCoreAsync(
+        RequestDecisionCommand command,
+        CancellationToken cancellationToken)
+    {
         // Constraint evaluation belongs here, between the request and the policy.
         // The foundation has no constraint store yet, so the eligible set passes
         // through unchanged and both lists are still recorded separately — the

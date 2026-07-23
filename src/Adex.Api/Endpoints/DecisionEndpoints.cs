@@ -1,9 +1,12 @@
 using System.Diagnostics;
 using System.Globalization;
+using System.Security.Cryptography;
+using System.Text.Json;
 using Adex.Api.Contracts;
 using Adex.Api.Http;
 using Adex.Api.Telemetry;
 using Adex.Api.Validation;
+using Adex.Application.Abstractions;
 using Adex.Application.Decisions;
 using Adex.Domain.Decisions;
 using Adex.Domain.Identifiers;
@@ -27,11 +30,27 @@ public static class DecisionEndpoints
         DecisionRequestDto? request,
         HttpContext http,
         RequestDecisionHandler handler,
+        IContextKeyPolicy contextKeyPolicy,
         CancellationToken cancellationToken)
     {
         TenantId tenant = TenantEndpointFilter.Current(http);
+        string? idempotencyKey = ReadIdempotencyKey(http);
+        if (http.Request.Headers.ContainsKey("Idempotency-Key") && idempotencyKey is null)
+        {
+            return Problems.Malformed(
+                http,
+                "Idempotency-Key must contain 8 to 64 letters, digits, dots, underscores or hyphens.");
+        }
 
-        if (!RequestValidation.TryValidate(request, out RequestValidation.DecisionInput input, out var errors))
+        IReadOnlySet<string> allowedContextKeys = await contextKeyPolicy
+            .GetAllowedKeysAsync(tenant, cancellationToken)
+            .ConfigureAwait(false);
+
+        if (!RequestValidation.TryValidate(
+                request,
+                allowedContextKeys,
+                out RequestValidation.DecisionInput input,
+                out var errors))
         {
             return Problems.Validation(http, errors);
         }
@@ -50,11 +69,22 @@ public static class DecisionEndpoints
                     input.Eligible,
                     input.Context,
                     input.Subject,
-                    CorrelationIdMiddleware.Current(http)),
+                    CorrelationIdMiddleware.Current(http),
+                    idempotencyKey,
+                    idempotencyKey is null ? null : Fingerprint(request!)),
                 cancellationToken)
             .ConfigureAwait(false);
 
         double elapsedMs = Stopwatch.GetElapsedTime(startedAt).TotalMilliseconds;
+
+        if (result.Status == RequestDecisionStatus.IdempotencyConflict)
+        {
+            return Problems.Conflict(
+                http,
+                Problems.IdempotencyKeyReused,
+                "The idempotency key was already used.",
+                "Reuse an Idempotency-Key only with the same decision request.");
+        }
 
         if (result.Status == RequestDecisionStatus.NoEligibleAlternatives || result.Decision is null)
         {
@@ -96,5 +126,65 @@ public static class DecisionEndpoints
             decision.Selected.Value,
             new PolicyReferenceDto(decision.Policy.Key, decision.Policy.Version),
             decision.DecidedAt.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss.fff'Z'", CultureInfo.InvariantCulture)));
+    }
+
+    private static string? ReadIdempotencyKey(HttpContext http)
+    {
+        string value = http.Request.Headers["Idempotency-Key"].ToString();
+        if (value.Length is < 8 or > 64)
+        {
+            return null;
+        }
+
+        return value.All(character =>
+            character is >= 'A' and <= 'Z'
+            || character is >= 'a' and <= 'z'
+            || character is >= '0' and <= '9'
+            || character is '.' or '_' or '-')
+            ? value
+            : null;
+    }
+
+    private static string Fingerprint(DecisionRequestDto request)
+    {
+        using var buffer = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(buffer))
+        {
+            writer.WriteStartObject();
+            writer.WriteString("placement", request.Placement);
+            writer.WritePropertyName("eligible_alternatives");
+            writer.WriteStartArray();
+            foreach (EligibleAlternativeDto alternative in request.EligibleAlternatives!)
+            {
+                writer.WriteStartObject();
+                writer.WriteString("key", alternative.Key);
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndArray();
+            if (request.SubjectId is not null)
+            {
+                writer.WriteString("subject_id", request.SubjectId);
+            }
+
+            if (request.Context is not null)
+            {
+                writer.WritePropertyName("context");
+                writer.WriteStartObject();
+                foreach ((string key, JsonElement value) in request.Context.OrderBy(
+                             pair => pair.Key,
+                             StringComparer.Ordinal))
+                {
+                    writer.WritePropertyName(key);
+                    value.WriteTo(writer);
+                }
+
+                writer.WriteEndObject();
+            }
+
+            writer.WriteEndObject();
+        }
+
+        return Convert.ToHexString(SHA256.HashData(buffer.ToArray()));
     }
 }

@@ -36,7 +36,8 @@ public sealed class RequestDecisionHandlerTests
             store,
             new SequentialIdentifierGenerator(clock.UtcNow),
             new StaticSaltProvider("an-environment-scoped-salt"),
-            clock);
+            clock,
+            new InMemoryDecisionIdempotencyStore());
 
         return new Harness(handler, store, clock);
     }

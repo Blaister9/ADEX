@@ -159,7 +159,7 @@ public sealed class DecisionContractTests(AdexApiFactory factory) : IClassFixtur
             {
                 placement = "homepage.primary-cta",
                 eligible_alternatives = new[] { new { key = "variant-a" } },
-                context = new Dictionary<string, object> { ["Visitor-Email"] = "someone@example.test" },
+                context = new Dictionary<string, object> { ["email"] = "someone@example.test" },
             });
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
@@ -167,6 +167,141 @@ public sealed class DecisionContractTests(AdexApiFactory factory) : IClassFixtur
         Assert.Equal(
             "unknown_context_key",
             body.GetProperty("errors").EnumerateArray().First().GetProperty("code").GetString());
+    }
+
+    [Fact]
+    public async Task Enforces_tenant_specific_context_allow_lists()
+    {
+        static object Request(string key) => new
+        {
+            placement = "homepage.primary-cta",
+            eligible_alternatives = new[] { new { key = "variant-a" } },
+            context = new Dictionary<string, object> { [key] = "segment-a" },
+        };
+
+        HttpResponseMessage aOwn = await factory.CreateClientFor(AdexApiFactory.TenantAKey)
+            .PostAsJsonAsync("/v1/decisions", Request("campaign_bucket"));
+        HttpResponseMessage aForeign = await factory.CreateClientFor(AdexApiFactory.TenantAKey)
+            .PostAsJsonAsync("/v1/decisions", Request("catalog_segment"));
+        HttpResponseMessage bOwn = await factory.CreateClientFor(AdexApiFactory.TenantBKey)
+            .PostAsJsonAsync("/v1/decisions", Request("catalog_segment"));
+        HttpResponseMessage bForeign = await factory.CreateClientFor(AdexApiFactory.TenantBKey)
+            .PostAsJsonAsync("/v1/decisions", Request("campaign_bucket"));
+
+        Assert.Equal(HttpStatusCode.OK, aOwn.StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, aForeign.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, bOwn.StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, bForeign.StatusCode);
+    }
+
+    [Fact]
+    public async Task Rejects_unknown_fields_at_the_root_and_in_alternatives()
+    {
+        HttpClient client = factory.CreateClientFor(AdexApiFactory.TenantAKey);
+        HttpResponseMessage root = await client.PostAsJsonAsync("/v1/decisions", new
+        {
+            placement = "homepage.primary-cta",
+            eligible_alternatives = new[] { new { key = "variant-a" } },
+            force_alternative = "variant-a",
+        });
+        HttpResponseMessage nested = await client.PostAsJsonAsync("/v1/decisions", new
+        {
+            placement = "homepage.primary-cta",
+            eligible_alternatives = new[] { new { key = "variant-a", weight = 1 } },
+        });
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, root.StatusCode);
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, nested.StatusCode);
+        Assert.Equal(
+            "/force_alternative",
+            (await ReadAsync(root)).GetProperty("errors")[0].GetProperty("pointer").GetString());
+        Assert.Equal(
+            "/eligible_alternatives/0/weight",
+            (await ReadAsync(nested)).GetProperty("errors")[0].GetProperty("pointer").GetString());
+    }
+
+    [Fact]
+    public async Task Replays_the_same_decision_for_the_same_idempotency_key_and_body()
+    {
+        HttpClient client = factory.CreateClientFor(AdexApiFactory.TenantAKey);
+        async Task<JsonElement> SendAsync()
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/decisions")
+            {
+                Content = JsonContent.Create(MinimalRequest()),
+            };
+            request.Headers.Add("Idempotency-Key", "retry-request-0001");
+            return await ReadAsync(await client.SendAsync(request));
+        }
+
+        JsonElement first = await SendAsync();
+        JsonElement replay = await SendAsync();
+
+        Assert.Equal(first.GetProperty("decision_id").GetString(), replay.GetProperty("decision_id").GetString());
+        Assert.Equal(first.GetRawText(), replay.GetRawText());
+    }
+
+    [Fact]
+    public async Task Rejects_an_idempotency_key_reused_with_a_different_body()
+    {
+        HttpClient client = factory.CreateClientFor(AdexApiFactory.TenantAKey);
+        async Task<HttpResponseMessage> SendAsync(string alternative)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/decisions")
+            {
+                Content = JsonContent.Create(new
+                {
+                    placement = "homepage.primary-cta",
+                    eligible_alternatives = new[] { new { key = alternative } },
+                }),
+            };
+            request.Headers.Add("Idempotency-Key", "retry-request-0002");
+            return await client.SendAsync(request);
+        }
+
+        Assert.Equal(HttpStatusCode.OK, (await SendAsync("variant-a")).StatusCode);
+        HttpResponseMessage conflict = await SendAsync("variant-b");
+        Assert.Equal(HttpStatusCode.Conflict, conflict.StatusCode);
+        Assert.Equal(
+            "https://contracts.adex.dev/problems/idempotency-key-reused",
+            (await ReadAsync(conflict)).GetProperty("type").GetString());
+    }
+
+    [Fact]
+    public async Task Scopes_idempotency_keys_by_tenant()
+    {
+        async Task<string?> SendAsync(string tenantKey)
+        {
+            HttpClient client = factory.CreateClientFor(tenantKey);
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/decisions")
+            {
+                Content = JsonContent.Create(MinimalRequest()),
+            };
+            request.Headers.Add("Idempotency-Key", "shared-across-tenants");
+            return (await ReadAsync(await client.SendAsync(request))).GetProperty("decision_id").GetString();
+        }
+
+        Assert.NotEqual(
+            await SendAsync(AdexApiFactory.TenantAKey),
+            await SendAsync(AdexApiFactory.TenantBKey));
+    }
+
+    [Fact]
+    public async Task Concurrent_retries_observe_one_decision()
+    {
+        HttpClient client = factory.CreateClientFor(AdexApiFactory.TenantAKey);
+        async Task<string?> SendAsync(int _)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/v1/decisions")
+            {
+                Content = JsonContent.Create(MinimalRequest()),
+            };
+            request.Headers.Add("Idempotency-Key", "concurrent-retry-0001");
+            return (await ReadAsync(await client.SendAsync(request))).GetProperty("decision_id").GetString();
+        }
+
+        string?[] ids = await Task.WhenAll(Enumerable.Range(0, 16).Select(SendAsync));
+        Assert.Single(ids.Distinct(StringComparer.Ordinal));
     }
 
     [Fact]

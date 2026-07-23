@@ -44,4 +44,11 @@ public sealed class TenancyOptions
     /// configured keys outside the Development environment.
     /// </summary>
     public Dictionary<string, string> DevelopmentApiKeys { get; } = new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Additional context keys allowed per tenant identifier. The privacy-safe
+    /// foundation keys remain allowed for every configured development tenant.
+    /// </summary>
+    public Dictionary<string, string[]> DevelopmentAdditionalContextKeys { get; } =
+        new(StringComparer.Ordinal);
 }

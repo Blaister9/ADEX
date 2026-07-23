@@ -1,3 +1,4 @@
+using Adex.Application.Abstractions;
 using Adex.Application.Health;
 using Adex.Infrastructure.Caching;
 using Adex.Infrastructure.Persistence.Postgres;
@@ -44,23 +45,31 @@ public sealed class DependencyProbeFailureTests
     {
         // Redis is never on the correctness path, so its absence must not drain
         // an instance from a load balancer (ADR-0004).
-        await using var probe = new RedisDependencyProbe(DeadRedis, NullLogger<RedisDependencyProbe>.Instance);
+        await using var probe = new RedisDependencyProbe(
+            DeadRedis,
+            NullLogger<RedisDependencyProbe>.Instance,
+            NullCacheDegradationSink.Instance);
 
         HealthCheckResult result = await probe.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HealthStatus.Degraded, result.Status);
         Assert.False(result.Required);
+        Assert.DoesNotContain("PostgreSQL", result.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
     public async Task Redis_reports_degraded_when_it_is_not_configured_at_all()
     {
-        await using var probe = new RedisDependencyProbe(null, NullLogger<RedisDependencyProbe>.Instance);
+        await using var probe = new RedisDependencyProbe(
+            null,
+            NullLogger<RedisDependencyProbe>.Instance,
+            NullCacheDegradationSink.Instance);
 
         HealthCheckResult result = await probe.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HealthStatus.Degraded, result.Status);
         Assert.Contains("without cache", result.Detail, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("PostgreSQL", result.Detail, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -103,10 +112,20 @@ public sealed class DependencyProbeInfrastructureTests
 
         await using var probe = new RedisDependencyProbe(
             InfrastructureAvailability.RedisConnectionString,
-            NullLogger<RedisDependencyProbe>.Instance);
+            NullLogger<RedisDependencyProbe>.Instance,
+            NullCacheDegradationSink.Instance);
 
         HealthCheckResult result = await probe.CheckAsync(TestContext.Current.CancellationToken);
 
         Assert.Equal(HealthStatus.Healthy, result.Status);
+    }
+}
+
+internal sealed class NullCacheDegradationSink : ICacheDegradationSink
+{
+    public static NullCacheDegradationSink Instance { get; } = new();
+
+    public void Record(string reason)
+    {
     }
 }

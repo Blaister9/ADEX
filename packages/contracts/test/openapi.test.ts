@@ -80,19 +80,14 @@ describe('OpenAPI document', () => {
     }
   });
 
-  it('documents the failure modes the decision path must implement', () => {
+  it('documents only failure modes the executable decision path implements', () => {
     const responses = (raw.paths[V1_PATHS.decisions]?.post as { responses: object }).responses;
-    expect(Object.keys(responses).sort()).toEqual([
-      '200',
-      '400',
-      '401',
-      '403',
-      '404',
-      '409',
-      '422',
-      '429',
-      '503',
-    ]);
+    expect(Object.keys(responses).sort()).toEqual(['200', '400', '401', '409', '422', '503']);
+  });
+
+  it('documents only failure modes the executable event path implements', () => {
+    const responses = (raw.paths[V1_PATHS.events]?.post as { responses: object }).responses;
+    expect(Object.keys(responses).sort()).toEqual(['202', '400', '401', '422', '503']);
   });
 
   it('returns 202 from ingestion, because a replay is not an error', () => {

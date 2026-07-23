@@ -44,6 +44,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddSingleton<ISeedSaltProvider, ConfiguredSeedSaltProvider>();
         services.AddSingleton<IPolicyResolver, UniformRandomPolicyResolver>();
         services.AddSingleton<ITenantDirectory, ConfiguredTenantDirectory>();
+        services.AddSingleton<IContextKeyPolicy, ConfiguredContextKeyPolicy>();
 
         PersistenceProvider provider = ReadProvider(configuration);
         AddPersistence(services, provider, isDevelopment);
@@ -78,8 +79,11 @@ public static class InfrastructureServiceCollectionExtensions
 
                 services.AddSingleton<InMemoryDecisionStore>();
                 services.AddSingleton<InMemoryEventStore>();
+                services.AddSingleton<InMemoryDecisionIdempotencyStore>();
                 services.AddSingleton<IDecisionStore>(sp => sp.GetRequiredService<InMemoryDecisionStore>());
                 services.AddSingleton<IEventStore>(sp => sp.GetRequiredService<InMemoryEventStore>());
+                services.AddSingleton<IDecisionIdempotencyStore>(
+                    sp => sp.GetRequiredService<InMemoryDecisionIdempotencyStore>());
                 break;
 
             case PersistenceProvider.Postgres:
@@ -118,7 +122,8 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddSingleton<IDependencyProbe>(sp => new RedisDependencyProbe(
             redis,
-            sp.GetRequiredService<ILogger<RedisDependencyProbe>>()));
+            sp.GetRequiredService<ILogger<RedisDependencyProbe>>(),
+            sp.GetRequiredService<ICacheDegradationSink>()));
     }
 
     /// <summary>
@@ -143,5 +148,6 @@ public static class InfrastructureServiceCollectionExtensions
         }
 
         _ = services.GetRequiredService<ITenantDirectory>();
+        _ = services.GetRequiredService<IContextKeyPolicy>();
     }
 }

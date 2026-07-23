@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using OpenTelemetry.Logs;
 
 namespace Adex.ContractTests;
 
@@ -16,6 +18,7 @@ namespace Adex.ContractTests;
 /// </summary>
 public sealed class AdexApiFactory : WebApplicationFactory<Program>
 {
+    public static LockedCollection<LogRecord> ExportedLogs { get; } = [];
     public const string TenantAKey = "pk_test_reference_services";
     public const string TenantBKey = "pk_test_reference_catalog";
     public const string TenantAId = "ten_01JQZ6A1B2C3D4E5F6G7H8J9K0";
@@ -49,12 +52,20 @@ public sealed class AdexApiFactory : WebApplicationFactory<Program>
         Environment.SetEnvironmentVariable(
             $"Adex__Tenancy__DevelopmentApiKeys__{TenantBKey}",
             TenantBId);
+        Environment.SetEnvironmentVariable(
+            $"Adex__Tenancy__DevelopmentAdditionalContextKeys__{TenantAId}__0",
+            "campaign_bucket");
+        Environment.SetEnvironmentVariable(
+            $"Adex__Tenancy__DevelopmentAdditionalContextKeys__{TenantBId}__0",
+            "catalog_segment");
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         ArgumentNullException.ThrowIfNull(builder);
         builder.UseEnvironment("Development");
+        builder.ConfigureLogging(logging => logging.AddOpenTelemetry(
+            options => options.AddInMemoryExporter(ExportedLogs)));
     }
 
     public HttpClient CreateClientFor(string apiKey)

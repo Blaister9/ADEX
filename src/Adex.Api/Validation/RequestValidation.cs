@@ -32,6 +32,7 @@ public static class RequestValidation
     public const int MaxEligibleAlternatives = 50;
     public const int MaxContextKeys = DecisionContext.MaxKeys;
     public const int MaxPropertyKeys = 64;
+    public const int MaxPropertiesUtf8Bytes = 4 * 1024;
     public const int MaxValueLength = DecisionContext.MaxValueLength;
 
     public sealed record DecisionInput(
@@ -50,6 +51,7 @@ public static class RequestValidation
 
     public static bool TryValidate(
         DecisionRequestDto? request,
+        IReadOnlySet<string> allowedContextKeys,
         out DecisionInput input,
         out List<ValidationErrorDto> errors)
     {
@@ -61,6 +63,8 @@ public static class RequestValidation
             errors.Add(new ValidationErrorDto("", "required", "A JSON body is required."));
             return false;
         }
+
+        AddUnknownPropertyErrors(request.UnmappedProperties, "", errors);
 
         if (!PlacementKey.TryParse(request.Placement, out PlacementKey placement))
         {
@@ -93,6 +97,10 @@ public static class RequestValidation
             {
                 string pointer = $"/eligible_alternatives/{index.ToString(CultureInfo.InvariantCulture)}/key";
                 string? key = alternatives[index].Key;
+                AddUnknownPropertyErrors(
+                    alternatives[index].UnmappedProperties,
+                    $"/eligible_alternatives/{index.ToString(CultureInfo.InvariantCulture)}",
+                    errors);
 
                 if (!AlternativeKey.TryParse(key, out AlternativeKey alternativeKey))
                 {
@@ -133,6 +141,7 @@ public static class RequestValidation
             request.Context,
             "/context",
             MaxContextKeys,
+            allowedContextKeys,
             errors,
             out Dictionary<string, string?> contextValues)
             ? DecisionContext.Create(contextValues)
@@ -160,6 +169,8 @@ public static class RequestValidation
             errors.Add(new ValidationErrorDto("", "required", "A JSON body is required."));
             return false;
         }
+
+        AddUnknownPropertyErrors(request.UnmappedProperties, "", errors);
 
         if (!EventId.TryParse(request.EventId, out EventId eventId))
         {
@@ -221,8 +232,18 @@ public static class RequestValidation
             request.Properties,
             "/properties",
             MaxPropertyKeys,
+            allowedKeys: null,
             errors,
             out Dictionary<string, string?> properties);
+
+        if (request.Properties is not null
+            && JsonSerializer.SerializeToUtf8Bytes(request.Properties).Length > MaxPropertiesUtf8Bytes)
+        {
+            errors.Add(new ValidationErrorDto(
+                "/properties",
+                "max_bytes",
+                $"The serialized properties object is limited to {MaxPropertiesUtf8Bytes} UTF-8 bytes."));
+        }
 
         if (errors.Count > 0)
         {
@@ -258,6 +279,7 @@ public static class RequestValidation
         IReadOnlyDictionary<string, JsonElement>? source,
         string pointerPrefix,
         int maxKeys,
+        IReadOnlySet<string>? allowedKeys,
         List<ValidationErrorDto> errors,
         out Dictionary<string, string?> values)
     {
@@ -286,8 +308,18 @@ public static class RequestValidation
             {
                 errors.Add(new ValidationErrorDto(
                     pointer,
+                    "pattern",
+                    "Keys must match ^[a-z][a-z0-9_]{0,39}$."));
+                valid = false;
+                continue;
+            }
+
+            if (allowedKeys is not null && !allowedKeys.Contains(key))
+            {
+                errors.Add(new ValidationErrorDto(
+                    pointer,
                     "unknown_context_key",
-                    "Keys must match ^[a-z][a-z0-9_]{0,39}$ and be declared in tenant configuration."));
+                    "The context key is not declared for this tenant."));
                 valid = false;
                 continue;
             }
@@ -316,6 +348,25 @@ public static class RequestValidation
         }
 
         return valid;
+    }
+
+    private static void AddUnknownPropertyErrors(
+        IDictionary<string, JsonElement>? properties,
+        string pointerPrefix,
+        List<ValidationErrorDto> errors)
+    {
+        if (properties is null)
+        {
+            return;
+        }
+
+        foreach (string property in properties.Keys.Order(StringComparer.Ordinal))
+        {
+            errors.Add(new ValidationErrorDto(
+                $"{pointerPrefix}/{property}",
+                "unknown_field",
+                "Unknown request fields are rejected by the public contract."));
+        }
     }
 
     private static bool TryReadScalar(JsonElement element, out string? value)

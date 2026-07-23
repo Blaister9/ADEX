@@ -35,7 +35,8 @@ public sealed class RecordEventHandlerTests
                 decisionStore,
                 new SequentialIdentifierGenerator(clock.UtcNow),
                 new StaticSaltProvider("an-environment-scoped-salt"),
-                clock),
+                clock,
+                new InMemoryDecisionIdempotencyStore()),
             eventStore,
             clock);
     }

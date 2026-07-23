@@ -1,3 +1,4 @@
+using Adex.Application.Abstractions;
 using Adex.Application.Health;
 using Microsoft.Extensions.Logging;
 using StackExchange.Redis;
@@ -14,7 +15,8 @@ namespace Adex.Infrastructure.Caching;
 /// </summary>
 public sealed class RedisDependencyProbe(
     string? connectionString,
-    ILogger<RedisDependencyProbe> logger) : IDependencyProbe, IAsyncDisposable
+    ILogger<RedisDependencyProbe> logger,
+    ICacheDegradationSink degradationSink) : IDependencyProbe, IAsyncDisposable
 {
     private static readonly TimeSpan ProbeTimeout = TimeSpan.FromSeconds(2);
 
@@ -29,6 +31,7 @@ public sealed class RedisDependencyProbe(
     {
         if (string.IsNullOrWhiteSpace(connectionString))
         {
+            degradationSink.Record("not_configured");
             return new HealthCheckResult(
                 Name,
                 HealthStatus.Degraded,
@@ -47,12 +50,13 @@ public sealed class RedisDependencyProbe(
         }
         catch (Exception exception) when (exception is RedisException or OperationCanceledException or TimeoutException)
         {
+            degradationSink.Record("unreachable");
             logger.LogWarning(exception, "Redis readiness probe failed; continuing without cache acceleration.");
             return new HealthCheckResult(
                 Name,
                 HealthStatus.Degraded,
                 Required,
-                "Redis is unreachable; ADEX continues to serve from PostgreSQL.");
+                "Redis is unreachable; ADEX continues without cache acceleration.");
         }
     }
 

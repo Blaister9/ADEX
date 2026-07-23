@@ -27,9 +27,10 @@ dependency and whether it is required.
 ## What is real and what is not
 
 Real: the decision path end to end in process, uniform-random selection, seed
-determinism and replayability, the full decision audit record, idempotent event
-ingestion, cross-tenant refusal, clock-skew rejection, health probes,
-OpenTelemetry wiring, problem+json errors.
+determinism and replayability, the full decision audit record, 24-hour
+tenant-scoped decision retry idempotency, idempotent event ingestion,
+tenant-specific context allow-lists, cross-tenant refusal, clock-skew rejection,
+health probes, OpenTelemetry logs/metrics/traces, and problem+json errors.
 
 Not real yet, and named so in the code rather than dressed up:
 
@@ -38,8 +39,9 @@ Not real yet, and named so in the code rather than dressed up:
   pointer to roadmap task 004 rather than silently falling back.
 - `Policies/UniformRandomPolicyResolver` — resolves every placement to
   `uniform-random` v1 because there is no configuration store yet.
-- `Tenancy/ConfiguredTenantDirectory` — API keys from configuration, with no
-  hashing, origin allow-list, rotation or rate limiting.
+- `Tenancy/ConfiguredTenantDirectory` and `ConfiguredContextKeyPolicy` — API
+  keys and context allow-lists from development configuration, with no hashing,
+  origin allow-list, rotation or rate limiting.
 
 The API refuses to start with any of these outside the Development environment.
 
